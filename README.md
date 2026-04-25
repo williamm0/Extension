@@ -2,7 +2,7 @@ Do NOT install via releases unless you are familiar with the process.
 
 To install:
 
-Install either install.bat (Windows) or install.command (macOS) from the repository (above), not releases.
+Install either install.bat (Windows) or install.command (macOS) from the repository (above), NOT releases.
 This will install automatically and will update in the future.
 
 
