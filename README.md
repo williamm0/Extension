@@ -42,7 +42,7 @@ Run install.bat on Windows or install.command on macOS. It installs the newest v
 
 The `.command` file needs execute permission before it'll run.
 
-1. Open Terminal — `Cmd + Space`, type Terminal, hit Enter
+1. Open Terminal
 2. Type `chmod +x ` (with a space after the x)
 3. Drag your `install.command` file into the Terminal window. The path fills in automatically
 4. Press Enter
