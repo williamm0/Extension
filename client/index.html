@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jx</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header>
+    <span class="brand">jx<span class="brand-ver" id="brandVer"></span></span>
+    <div class="header-actions">
+      <button class="icon-btn" id="presetsBtn" title="Quick Presets">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="updateBanner">
+    <div class="update-dot"></div>
+    <span class="update-text"></span>
+    <button class="update-btn" id="btnUpdate">Update</button>
+    <div id="updateProgressBar" class="update-progress-bar"></div>
+  </div>
+
+  <div class="scroll-area">
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Layers</span>
+      </div>
+      <div class="section-body">
+        <button class="tool-btn" id="btnPrecompose">Precompose Selected</button>
+        <button class="tool-btn" id="btnFrameBlend">Frame Blending</button>
+        <button class="tool-btn" id="btnMotionBlur">Motion Blur</button>
+        <button class="tool-btn" id="btnTrimComp">Trim Comp to Work Area</button>
+        <button class="tool-btn" id="btnAutoLabel">Auto-Label Layers</button>
+        <button class="tool-btn" id="btnCenterAnchor">Center Anchor</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Animation</span>
+      </div>
+      <div class="section-body">
+        <div class="input-row">
+          <label>Word offset</label>
+          <div class="input-unit-wrap">
+            <input type="number" id="wordOffset" class="num-input" value="80" min="10" max="2000" step="10">
+            <span class="input-unit">ms</span>
+          </div>
+        </div>
+        <button class="tool-btn" id="btnWordAnimate">Word-by-Word</button>
+
+        <div class="section-divider"></div>
+
+        <button class="tool-btn" id="btnDetectBeats">Detect Beats</button>
+        <div class="input-row" id="beatFallbackRow" style="display:none">
+          <label>BPM</label>
+          <input type="number" id="beatBpm" class="num-input" value="120" min="1" max="999" step="1">
+        </div>
+        <button class="tool-btn" id="btnSnapToMarkers">Snap Keys to Markers</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">FX</span>
+      </div>
+      <div class="section-body">
+        <div class="input-row">
+          <label>Steps</label>
+          <input type="number" id="echoSteps" class="num-input" value="3" min="1" max="12" step="1">
+          <label style="margin-left:6px">Offset</label>
+          <div class="input-unit-wrap">
+            <input type="number" id="echoOffset" class="num-input" value="0.10" min="0.01" max="2" step="0.01">
+            <span class="input-unit">s</span>
+          </div>
+        </div>
+        <button class="tool-btn" id="btnEchoTrail">Echo Trail</button>
+
+        <div class="section-divider"></div>
+
+        <div class="input-row">
+          <label>Repeats</label>
+          <input type="number" id="loopRepeats" class="num-input" value="2" min="1" max="32" step="1">
+        </div>
+        <button class="tool-btn" id="btnLoopDuplicate">Loop Duplicate</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Colour</span>
+      </div>
+      <div class="section-body">
+
+        <div class="file-zone" id="fileZone">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span class="file-zone-name" id="fileZoneName">Drop your .ffx file here</span>
+          <span class="file-zone-hint" id="fileZoneHint">or have a browse</span>
+          <input type="file" id="ffxInput" accept=".ffx" style="display:none">
+        </div>
+
+        <button class="tool-btn accent" id="btnApplyColor" disabled>
+          Apply to Adjustment Layer
+        </button>
+
+      </div>
+    </section>
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Keyframes</span>
+      </div>
+      <div class="section-body">
+        <button class="tool-btn" id="btnStretch">Fit Keys to Clip</button>
+        <button class="tool-btn" id="btnReverseKeys">Reverse Keyframes</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Easing</span>
+      </div>
+      <div class="section-body">
+
+        <canvas id="easeCanvas" class="ease-canvas"></canvas>
+        <div id="easeDisplay" class="ease-display">Out 35%  ·  In 35%</div>
+
+        <div id="easePresetGrid" class="ease-preset-grid"></div>
+
+        <div class="btn-row">
+          <button class="tool-btn flex-1 accent" id="btnApplyEase">Apply to Selected</button>
+          <button class="tool-btn icon-only" id="btnSaveCurve" title="Save curve">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="curveLibrary" class="graph-library" style="display:none">
+          <div class="graph-library-hd">
+            <span class="graph-library-label">Saved</span>
+          </div>
+          <div id="curveList"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <a href="#" id="creditLink">Made by jx</a>
+  </footer>
+
+</div>
+
+
+<div id="presetsView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="presetsBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Quick Presets</span>
+  </div>
+
+  <div class="settings-body">
+
+    <div class="settings-group">
+      <div class="settings-group-label">Add Preset</div>
+      <div class="file-zone" id="presetDropZone">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span class="file-zone-name">Drop .ffx files here</span>
+        <span class="file-zone-hint">or click to browse — multiple ok</span>
+        <input type="file" id="presetFileInput" accept=".ffx" multiple style="display:none">
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Saved</div>
+      <div id="presetsList"></div>
+      <div class="settings-path" id="presetsEmpty">No presets saved yet.</div>
+    </div>
+
+  </div>
+</div>
+
+
+<div id="settingsView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="settingsBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Settings</span>
+  </div>
+
+  <div class="settings-body">
+
+    <div class="settings-group">
+      <div class="settings-group-label">Colour Theme</div>
+      <div class="theme-swatches">
+        <button class="theme-swatch" data-theme="amber" style="--swatch:#c09050" title="Amber"></button>
+        <button class="theme-swatch" data-theme="blue"  style="--swatch:#5090c0" title="Blue"></button>
+        <button class="theme-swatch" data-theme="green" style="--swatch:#6aab7a" title="Green"></button>
+        <button class="theme-swatch" data-theme="red"   style="--swatch:#c05060" title="Red"></button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Frame Blending Mode</div>
+      <div class="radio-row">
+        <label class="radio-label"><input type="radio" name="fbMode" value="mix"> Frame Mix</label>
+        <label class="radio-label"><input type="radio" name="fbMode" value="pixel" checked> Pixel Motion</label>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Layer Labels</div>
+      <div class="label-row">
+        <span class="label-row-text">Footage</span>
+        <select class="label-select" id="labelFootage">
+          <option value="0">None</option><option value="1">Red</option><option value="2">Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8" selected>Blue</option>
+          <option value="9">Green</option><option value="10">Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Text</span>
+        <select class="label-select" id="labelText">
+          <option value="0">None</option><option value="1">Red</option><option value="2" selected>Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8">Blue</option>
+          <option value="9">Green</option><option value="10">Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Effects</span>
+        <select class="label-select" id="labelEffects">
+          <option value="0">None</option><option value="1">Red</option><option value="2">Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8">Blue</option>
+          <option value="9">Green</option><option value="10" selected>Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Loaded Preset</div>
+      <div class="settings-path" id="settingsPath">None loaded</div>
+      <button class="tool-btn small" id="settingsClearPreset">Clear</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Updates</div>
+      <label class="checkbox-label"><input type="checkbox" id="checkPrerelease"> Include pre-releases</label>
+      <button class="tool-btn small" id="btnCheckUpdate">Check for Updates</button>
+    </div>
+
+    <div class="settings-footer">
+      <span class="version-tag" id="settingsVersion"></span>
+    </div>
+
+  </div>
+</div>
+
+
+<div id="saveModal" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-title">Save Curve</div>
+    <input type="text" id="saveInput" class="modal-input" placeholder="Name it..." maxlength="40" autocomplete="off" spellcheck="false">
+    <div class="modal-actions">
+      <button class="tool-btn small" id="saveCancel">Cancel</button>
+      <button class="tool-btn small accent" id="saveConfirm">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast" class="toast out"></div>
+
+
+<script src="js/CSInterface.js"></script>
+<script src="js/version.js"></script>
+<script src="js/updater.js"></script>
+<script src="js/graph-editor.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
