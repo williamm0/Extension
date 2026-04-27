@@ -13,7 +13,7 @@ These include:
 - The auto-label not labelling layer names.
 
 ---
-## What it does
+## What it does (v1.1.0)
 **Layers**
 - Precompose selected layers individually in one go, each into its own comp, trimmed to the exact in/out point
 - Toggle frame blending (Frame Mix or Pixel Motion) across multiple layers at once
