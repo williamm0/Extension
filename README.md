@@ -5,7 +5,7 @@ The panel is open source, so you can inspect how I built it.
 
 ## KNOWN BUGS & ERRORS
 
-I’ve been testing the pre-release version 1.1.0 and have discovered a few bugs that I’ll fix in the final release. These include:
+I’ve been testing the [pre-release version 1.1.0](https://github.com/williamm0/Extension/releases/download/V1.1.0/jxtools.v.1.1.0.zip) and have discovered a few bugs that I’ll fix in the final release. These include:
 - The updater not actually updating.
 - Some settings not saving after an update.
 - The auto-label not labelling layer names.
