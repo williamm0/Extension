@@ -52,3 +52,5 @@ The `.command` file needs execute permission before it'll run.
 ---
 
 Tested on After Effects 2026. Windows and macOS.
+
+Running into any problems? Feel free to reach out to me by email: jx@jxffx.com
