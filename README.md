@@ -5,7 +5,16 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 ---
 
 ## KNOWN BUGS & ERRORS
-- Beat detection not working as expected (Fixed in Pre-Release V1.1.1)
+
+**V1.1.0:**
+- Beat detection not working as expected
+- Update tool not working (only for updating to pre-release)
+- Easing not working
+
+**V1.1.1 (pre-release)**
+- Beat detection not loading audio
+- Update tool not working (only for updating to pre-release)
+- Easing not working
 
 ---
 
