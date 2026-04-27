@@ -1,8 +1,7 @@
 # jx Tools for After Effects
 
-A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It handles the repetitive stuff, the things that take 10 clicks when they should take one.
-
-Its open source so you can always look into how i made it :)
+A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one.
+The panel is open source, so you can inspect how I built it.
 
 ---
 
@@ -23,7 +22,7 @@ Its open source so you can always look into how i made it :)
 - Custom easing editor: a bezier graph you can drag by hand, with five presets (Linear, Ease, In, Out, In/Out). Apply whatever curve you've drawn to all keyframes across selected layers in one click. Save curves you use often to a personal library
 
 **Other**
-- Auto-updates: checks GitHub on load and shows a banner when a new version is out. Falls back to a shell-level check if your network restricts the panel's browser, so it works in locked-down studio environments too
+- Auto-updates: checks GitHub on load and shows a banner when a new version is out. It also checks for updates at the shell level, working in locked-down studio environments.
 - Four accent colour themes
 - Dark UI that doesn't fight with AE's own interface
 
@@ -33,10 +32,9 @@ Its open source so you can always look into how i made it :)
 
 Do NOT install via releases unless you are familiar with the process.
 
-**[→ Download installer here](https://github.com/user-attachments/files/27121510/install.zip)**
+**[→ Download the installer here](https://github.com/user-attachments/files/27121510/install.zip)**
 
-Run `install.bat` on Windows or `install.command` on macOS (READ BELOW). It installs the newest version of the extension automatically into your after effects, without you needing to doing anything.
-
+Run install.bat on Windows or install.command on macOS. It installs the newest version of the extension automatically into your After-Effects, without you needing to doing anything.
 ---
 
 **macOS installing**
@@ -53,4 +51,4 @@ The `.command` file needs execute permission before it'll run.
 
 Tested on After Effects 2026. Windows and macOS.
 
-Running into any problems? Feel free to reach out to me by email: jx@jxffx.com
+Running into any problems? Reach out to me at jx@jxffx.com.
