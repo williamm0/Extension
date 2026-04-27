@@ -3,6 +3,13 @@
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one.
 The panel is open source, so you can inspect how I built it.
 
+## KNOWN BUGS & ERRORS
+
+I’ve been testing the pre-release version 1.1.0 and have discovered a few bugs that I’ll fix in the final release. These include:
+- The updater not actually updating.
+- Some settings not saving after an update.
+- The auto-label not labelling layer names.
+
 ---
 ## What it does
 **Layers**
