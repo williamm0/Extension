@@ -5,7 +5,9 @@ The panel is open source, so you can inspect how I built it.
 
 ## KNOWN BUGS & ERRORS
 
-I’ve been testing the [pre-release version 1.1.0](https://github.com/williamm0/Extension/releases/download/V1.1.0/jxtools.v.1.1.0.zip) and have discovered a few bugs that I’ll fix in the final release. These include:
+I’ve been testing the [pre-release version 1.1.0](https://github.com/williamm0/Extension/releases/download/V1.1.0/jxtools.v.1.1.0.zip) and have discovered a few bugs that I’ll fix in the final release.
+These include:
+
 - The updater not actually updating.
 - Some settings not saving after an update.
 - The auto-label not labelling layer names.
@@ -58,4 +60,5 @@ The .command file needs execute permission before it'll run.
 5. Double-click the install.command file to run it
 ---
 Tested on After Effects 2026. Windows 11 and macOS Tahoe 26.4.1.
+
 Running into any problems or have suggestions? Reach out to me at jx@jxffx.com.
