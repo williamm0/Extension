@@ -512,6 +512,24 @@ function jx_reverseKeyframes() {
 
 // easing
 
+// Returns the scalar magnitude of the value change between two consecutive keys.
+// For 1-D properties (Opacity, Rotation…) this is just |b - a|.
+// For multi-D properties (Position, Scale…) it is the Euclidean distance,
+// because AE's KeyframeEase.speed is always a magnitude (units/second).
+function _valueMag(prop, k1, k2) {
+    try {
+        var a = prop.keyValue(k1);
+        var b = prop.keyValue(k2);
+        if (typeof a === 'number') return Math.abs(b - a);
+        var sum = 0;
+        for (var d = 0; d < a.length; d++) {
+            var dd = b[d] - a[d];
+            sum += dd * dd;
+        }
+        return Math.sqrt(sum);
+    } catch(e) { return 0; }
+}
+
 function jx_applyEase(curveJson) {
     var comp = getComp();
     if (!comp) return fail('No active composition.');
@@ -523,14 +541,35 @@ function jx_applyEase(curveJson) {
     try { curve = eval('(' + curveJson + ')'); } catch(e) { return fail('Bad curve data.'); }
     var ch1 = curve.h1, ch2 = curve.h2;
 
-    // Slope of cubic-bezier at t=0 is h1.y/h1.x; at t=1 is (1-h2.y)/(1-h2.x)
-    // When the handle collapses to the endpoint we fall back to linear interpolation
-    var degOut = ch1.x < 0.001;
-    var degIn  = ch2.x > 0.999;
+    // ── Bezier-to-AE mapping ──────────────────────────────────────────────────
+    // CSS cubic-bezier P0=(0,0), P1=(h1.x,h1.y), P2=(h2.x,h2.y), P3=(1,1).
+    //
+    // Tangent slope at t=0:  dy/dx = h1.y / h1.x   → velocity leaving a key
+    // Tangent slope at t=1:  dy/dx = (1-h2.y)/(1-h2.x) → velocity arriving at a key
+    //
+    // When the handle lands exactly on the endpoint (h1.x≈0 or h2.x≈1), the
+    // slope is undefined (vertical tangent), which maps to LINEAR interpolation.
+    //
+    // AE influence = fraction of the segment duration the handle extends over.
+    //   infOut = h1.x * 100
+    //   infIn  = (1 - h2.x) * 100
+    //
+    // AE speed (units/sec) for a segment [k → k+1]:
+    //   speedOut = slope0 × magnitude(valueDelta) / timeDelta
+    //   speedIn  = slope1 × magnitude(valueDelta) / timeDelta
+    //
+    // IMPORTANT: setTemporalEaseAtKey always takes a SINGLE-ELEMENT array
+    // regardless of the property's dimension count.  Passing a multi-element
+    // array (e.g. length 2 for Position) causes AE to throw a silent error
+    // and leaves the keyframe unchanged — the root cause of the "straight
+    // graph" bug.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    var degOut = (ch1.x < 0.001);            // out handle collapsed → linear start
+    var degIn  = (ch2.x > 0.999);            // in  handle collapsed → linear end
     var slope0 = degOut ? 0 : (ch1.y / ch1.x);
     var slope1 = degIn  ? 0 : ((1 - ch2.y) / (1 - ch2.x));
 
-    // Influence: how far the bezier handle extends along the segment (% of duration)
     var infOut = Math.max(0.1, Math.min(100, ch1.x * 100));
     var infIn  = Math.max(0.1, Math.min(100, (1 - ch2.x) * 100));
 
@@ -539,69 +578,64 @@ function jx_applyEase(curveJson) {
         var count = 0;
         for (var i = 0; i < sel.length; i++) {
             walkProps(sel[i], function(prop) {
-                if (prop.numKeys < 2) return;
                 var nk = prop.numKeys;
+                if (nk < 2) return;
 
                 for (var k = 1; k <= nk; k++) {
-                    var kTime = prop.keyTime(k);
+                    var kt = prop.keyTime(k);
 
-                    // ── out ease: velocity leaving key k toward key k+1 ──
-                    var useLinearOut = (k < nk && degOut);
-                    var outSpeeds = null;
-                    if (k < nk && !degOut) {
-                        var nextTime = prop.keyTime(k + 1);
-                        var dtOut = nextTime - kTime;
-                        if (dtOut > 0) {
-                            var v0 = prop.keyValue(k);
-                            var v1 = prop.keyValue(k + 1);
-                            var isArr = (v0 instanceof Array);
-                            var dim = isArr ? v0.length : 1;
-                            outSpeeds = [];
-                            for (var d = 0; d < dim; d++) {
-                                var dvOut = isArr ? (v1[d] - v0[d]) : (v1 - v0);
-                                outSpeeds.push(slope0 * Math.abs(dvOut) / dtOut);
+                    // ── outgoing ease (key k → key k+1) ──
+                    var outSpeed  = 0;
+                    var outLinear = false;
+                    if (k < nk) {
+                        if (degOut) {
+                            outLinear = true;
+                        } else {
+                            var dtOut = prop.keyTime(k + 1) - kt;
+                            if (dtOut > 0) {
+                                outSpeed = slope0 * _valueMag(prop, k, k + 1) / dtOut;
                             }
                         }
                     }
 
-                    // ── in ease: velocity arriving at key k from key k-1 ──
-                    var useLinearIn = (k > 1 && degIn);
-                    var inSpeeds = null;
-                    if (k > 1 && !degIn) {
-                        var prevTime = prop.keyTime(k - 1);
-                        var dtIn = kTime - prevTime;
-                        if (dtIn > 0) {
-                            var vPrev = prop.keyValue(k - 1);
-                            var vCur  = prop.keyValue(k);
-                            var isArr2 = (vPrev instanceof Array);
-                            var dim2 = isArr2 ? vPrev.length : 1;
-                            inSpeeds = [];
-                            for (var d2 = 0; d2 < dim2; d2++) {
-                                var dvIn = isArr2 ? (vCur[d2] - vPrev[d2]) : (vCur - vPrev);
-                                inSpeeds.push(slope1 * Math.abs(dvIn) / dtIn);
+                    // ── incoming ease (key k-1 → key k) ──
+                    var inSpeed  = 0;
+                    var inLinear = false;
+                    if (k > 1) {
+                        if (degIn) {
+                            inLinear = true;
+                        } else {
+                            var dtIn = kt - prop.keyTime(k - 1);
+                            if (dtIn > 0) {
+                                inSpeed = slope1 * _valueMag(prop, k - 1, k) / dtIn;
                             }
                         }
                     }
 
-                    // Set interpolation types
-                    var outType = useLinearOut ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.BEZIER;
-                    var inType  = useLinearIn  ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.BEZIER;
+                    var outType = outLinear ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.BEZIER;
+                    var inType  = inLinear  ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.BEZIER;
+
+                    // Set interpolation type first so AE accepts the temporal ease call
                     try { prop.setInterpolationTypeAtKey(k, inType, outType); } catch(e) {}
 
-                    // Set temporal ease (speed + influence per dimension)
+                    // Build ease arrays whose length matches what AE expects for this
+                    // property.  We read it from the property itself — for 1-D properties
+                    // (Opacity, Rotation…) AE returns length-1 arrays; for 2-D/3-D
+                    // (Position, Scale, Anchor…) it may return length-2 or length-3.
+                    // Constructing arrays of the WRONG length makes setTemporalEaseAtKey
+                    // throw a silent error and leave the keyframe unchanged — which is why
+                    // reading the dimension from AE directly is the only reliable approach.
                     try {
-                        var val  = prop.keyValue(k);
-                        var isArrV = (val instanceof Array);
-                        var dimV = isArrV ? val.length : 1;
-                        var eIn = [], eOut = [];
-                        for (var d3 = 0; d3 < dimV; d3++) {
-                            var spIn  = (inSpeeds  && d3 < inSpeeds.length)  ? inSpeeds[d3]  : 0;
-                            var spOut = (outSpeeds && d3 < outSpeeds.length) ? outSpeeds[d3] : 0;
-                            eIn.push(new KeyframeEase(spIn,  infIn));
-                            eOut.push(new KeyframeEase(spOut, infOut));
+                        var existingIn = prop.keyInTemporalEase(k);
+                        var nDim = (existingIn && existingIn.length > 0) ? existingIn.length : 1;
+                        var eIn  = [], eOut = [];
+                        for (var d = 0; d < nDim; d++) {
+                            eIn.push(new KeyframeEase(inSpeed,  infIn));
+                            eOut.push(new KeyframeEase(outSpeed, infOut));
                         }
                         prop.setTemporalEaseAtKey(k, eIn, eOut);
                     } catch(e) {}
+
                     count++;
                 }
             });
