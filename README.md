@@ -5,7 +5,8 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 ---
 ## KNOWN BUGS & ERRORS
 
-No currently known bugs.
+- Updater stuck at 0%
+
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
 ---
