@@ -83,7 +83,7 @@ function runUpdateCheck(includePrerelease, callback) {
 function processReleaseJson(json, wasAllReleases) {
     try {
         var data    = JSON.parse(json);
-        var release = Array.isArray(data) ? data[0] : data;
+        var release = Array.isArray(data) ? pickNewestRelease(data) : data;
         if (!release) return false;
         var tag    = release.tag_name || '';
         var latest = tag.replace(/^v/i, '');
@@ -100,15 +100,32 @@ function processReleaseJson(json, wasAllReleases) {
     }
 }
 
+function pickNewestRelease(releases) {
+    var newest = null;
+    for (var i = 0; i < releases.length; i++) {
+        var r = releases[i];
+        if (!r || r.draft) continue;
+        if (!newest || isNewerVersion((r.tag_name || '').replace(/^v/i, ''), (newest.tag_name || '').replace(/^v/i, ''))) {
+            newest = r;
+        }
+    }
+    return newest;
+}
+
 function isNewerVersion(a, b) {
-    var pa = a.split('.').map(Number);
-    var pb = b.split('.').map(Number);
+    var pa = normalizeVersionParts(a);
+    var pb = normalizeVersionParts(b);
     for (var i = 0; i < 3; i++) {
         var na = pa[i] || 0, nb = pb[i] || 0;
         if (na > nb) return true;
         if (na < nb) return false;
     }
     return false;
+}
+
+function normalizeVersionParts(v) {
+    v = String(v || '').replace(/^v/i, '').match(/\d+/g) || [];
+    return [Number(v[0]) || 0, Number(v[1]) || 0, Number(v[2]) || 0];
 }
 
 function showUpdateBanner() {
@@ -135,72 +152,81 @@ function setProgress(pct, visible) {
 }
 
 function startUpdate() {
-    if (!_updateInfo || !_updateInfo.downloadUrl) {
-        cs.openURLInDefaultBrowser(_updateInfo ? _updateInfo.htmlUrl : 'https://github.com/williamm0/Extension/releases');
-        return;
-    }
-    var nr = getNode();
-    if (nr) {
-        runNodeUpdate(nr);
-    } else {
-        cs.openURLInDefaultBrowser(_updateInfo.htmlUrl);
-        toast('Download the ZIP and run install.command to update.', 'error');
-    }
-}
+    if (!_updateInfo) return;
+    var extPath    = cs.getSystemPath(SystemPath.EXTENSION);
+    var isWin      = (navigator.platform.toLowerCase().indexOf('win') !== -1);
+    var sep        = isWin ? '\\' : '/';
+    var scriptPath = extPath + sep + 'update' + sep + (isWin ? 'update.bat' : 'update.command');
+    var infoPath   = extPath + sep + 'update' + sep + 'update_info.json';
+    var infoJson   = JSON.stringify({
+        url:     _updateInfo.downloadUrl,
+        version: _updateInfo.tag.replace(/^v/i, ''),
+        tag:     _updateInfo.tag
+    });
 
-function getNode() {
-    try { if (typeof cep_node !== 'undefined' && typeof cep_node.require === 'function') return cep_node.require.bind(cep_node); } catch(e) {}
-    try { require('fs'); return require; } catch(e) {}
-    return null;
-}
-
-function runNodeUpdate(nr) {
+    setBannerText('Launching installer...');
     var btn = document.getElementById('btnUpdate');
-    setBannerText('Downloading... <strong>0%</strong>');
-    setProgress(0, true);
-    if (btn) { btn.textContent = 'Cancel'; btn.disabled = false; btn.onclick = cancelUpdate; }
+    if (btn) btn.disabled = true;
 
-    var os      = nr('os');
-    var path    = nr('path');
-    var tmpFile = path.join(os.tmpdir(), 'jx_update_' + Date.now() + '.zip');
-    var extPath = cs.getSystemPath(SystemPath.EXTENSION);
+    var pathEsc = infoPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var jsonEsc = infoJson.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-    // backup settings to a sibling folder so they survive a full wipe
-    var backupPath = path.join(path.dirname(extPath), 'jx_settings_backup.json');
-    backupSettings(nr('fs'), backupPath);
-
-    downloadFile(nr, _updateInfo.downloadUrl, tmpFile, function(pct) {
-        setBannerText('Downloading... <strong>' + pct + '%</strong>');
-        setProgress(pct, true);
-    }, function(err, filePath) {
-        _activeRequest = null;
-        if (err) { setUpdateError(); return; }
-        setBannerText('Installing...');
-        setProgress(100, true);
-        if (btn) { btn.style.display = 'none'; }
-        installFromZip(nr, filePath, extPath, function(installErr) {
-            var fs = nr('fs');
-            // restore settings regardless of install result
-            restoreSettings(fs, backupPath);
-            if (installErr) {
-                setUpdateError();
-            } else {
-                setProgress(100, true);
-                setBannerText('Update installed — <strong>restart AE</strong> to apply.');
-                if (btn) {
-                    btn.textContent = 'Close';
-                    btn.style.display = '';
-                    btn.disabled  = false;
-                    btn.onclick   = function() { document.getElementById('updateBanner').style.display = 'none'; };
-                }
-            }
-        });
+    cs.evalScript("jx_writeFile('" + pathEsc + "','" + jsonEsc + "')", function(result) {
+        var res = parseResult(result);
+        if (!res || !res.success) {
+            setBannerText('Could not write update info.');
+            if (btn) { btn.disabled = false; btn.style.display = ''; btn.textContent = 'Retry'; btn.onclick = startUpdate; }
+            return;
+        }
+        launchInstallerScript(scriptPath, isWin);
     });
 }
 
-function cancelUpdate() {
-    if (_activeRequest) { try { _activeRequest.destroy(); } catch(e) {} _activeRequest = null; }
-    showUpdateBanner();
+function launchInstallerScript(scriptPath, isWin) {
+    var btn = document.getElementById('btnUpdate');
+    var nr  = getNode();
+    if (!nr) {
+        setBannerText('Node unavailable — open release page to install manually.');
+        if (btn) { btn.disabled = false; btn.style.display = ''; btn.textContent = 'Open release page'; btn.onclick = function() { cs.openURLInDefaultBrowser(_updateInfo.htmlUrl); }; }
+        return;
+    }
+    try {
+        var cp = nr('child_process');
+        if (isWin) {
+            cp.spawn('cmd.exe', ['/c', 'start', '', 'cmd.exe', '/k', scriptPath],
+                     { detached: true, stdio: 'ignore' }).unref();
+            setBannerText('Installer running — follow the terminal window.');
+            if (btn) btn.style.display = 'none';
+        } else {
+            // Run bash directly — no execute bit needed, no LaunchServices, no permission dialog
+            setBannerText('Installing...');
+            if (btn) btn.style.display = 'none';
+            var proc = cp.spawn('bash', [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+            proc.stdout.on('data', function(d) {
+                var line = d.toString().trim();
+                if (line) {
+                    if (line.indexOf('ERROR:') === 0) {
+                        setBannerText(line.slice(7));
+                        setUpdateError();
+                    } else {
+                        setBannerText(line);
+                    }
+                }
+            });
+            proc.stderr.on('data', function() {});
+            proc.on('close', function(code) {
+                if (code === 0) {
+                    setBannerText('Update installed — <strong>restart After Effects</strong> to apply.');
+                } else {
+                    setUpdateError();
+                }
+            });
+            proc.on('error', function() { setUpdateError(); });
+        }
+    } catch(e) {
+        setBannerText('Could not launch installer.');
+        if (btn) { btn.disabled = false; btn.style.display = ''; btn.textContent = 'Open release page'; btn.onclick = function() { cs.openURLInDefaultBrowser(_updateInfo.htmlUrl); }; }
+    }
 }
 
 function setUpdateError() {
@@ -212,100 +238,12 @@ function setUpdateError() {
     if (btn) { btn.textContent = 'Retry'; btn.disabled = false; btn.style.display = ''; btn.onclick = startUpdate; }
 }
 
-function downloadFile(nr, url, dest, onProgress, onDone) {
-    var fs    = nr('fs');
-    var https = nr('https');
-    var http  = nr('http');
-
-    function go(reqUrl, hops) {
-        if (hops > 8) { onDone(new Error('too many redirects')); return; }
-        try {
-            var isHttps = reqUrl.indexOf('https') === 0;
-            var mod     = isHttps ? https : http;
-            var req = mod.get(reqUrl, { headers: { 'User-Agent': 'jxtools-updater', 'Accept': 'application/octet-stream' } }, function(res) {
-                if ((res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) && res.headers.location) {
-                    res.resume();
-                    go(res.headers.location, hops + 1);
-                    return;
-                }
-                var total    = parseInt(res.headers['content-length'] || '0', 10);
-                var received = 0;
-                var chunks   = [];
-                res.on('data', function(chunk) {
-                    chunks.push(chunk);
-                    received += chunk.length;
-                    if (total > 0) onProgress(Math.round(received / total * 100));
-                });
-                res.on('end', function() {
-                    fs.writeFile(dest, Buffer.concat(chunks), function(e) { onDone(e || null, dest); });
-                });
-                res.on('error', onDone);
-            });
-            req.on('error', onDone);
-            _activeRequest = req;
-        } catch(e) { onDone(e); }
-    }
-    go(url, 0);
+function parseResult(raw) {
+    try { return JSON.parse(raw); } catch(e) { return null; }
 }
 
-function installFromZip(nr, zipPath, extPath, onDone) {
-    var os   = nr('os');
-    var path = nr('path');
-    var cp   = nr('child_process');
-    var fs   = nr('fs');
-    var isWin = process.platform === 'win32';
-    var extractDir = path.join(os.tmpdir(), 'jx_ext_' + Date.now());
-
-    var unzipCmd = isWin
-        ? 'powershell -Command "Expand-Archive -LiteralPath \'' + zipPath.replace(/'/g, "''") + '\' -DestinationPath \'' + extractDir.replace(/'/g, "''") + '\' -Force"'
-        : 'unzip -o "' + zipPath + '" -d "' + extractDir + '"';
-
-    cp.exec(unzipCmd, function(err) {
-        if (err) { onDone(err); return; }
-        var root = findExtRoot(fs, path, extractDir);
-        if (!root) { onDone(new Error('no CSXS found in archive')); return; }
-        var copyCmd = isWin
-            ? 'xcopy /E /Y /I "' + root + '\\*" "' + extPath + '"'
-            : 'cp -r "' + root + '/." "' + extPath + '/"';
-        cp.exec(copyCmd, function(copyErr) {
-            try { cp.exec(isWin ? 'rmdir /S /Q "' + extractDir + '"' : 'rm -rf "' + extractDir + '"'); } catch(e) {}
-            try { if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath); } catch(e) {}
-            onDone(copyErr || null);
-        });
-    });
-}
-
-function findExtRoot(fs, path, dir) {
-    if (fs.existsSync(path.join(dir, 'CSXS', 'manifest.xml'))) return dir;
-    try {
-        var entries = fs.readdirSync(dir);
-        for (var i = 0; i < entries.length; i++) {
-            var sub = path.join(dir, entries[i]);
-            try {
-                if (fs.statSync(sub).isDirectory() && fs.existsSync(path.join(sub, 'CSXS', 'manifest.xml'))) return sub;
-            } catch(e) {}
-        }
-    } catch(e) {}
+function getNode() {
+    try { if (typeof cep_node !== 'undefined' && typeof cep_node.require === 'function') return cep_node.require.bind(cep_node); } catch(e) {}
+    try { require('fs'); return require; } catch(e) {}
     return null;
-}
-
-function backupSettings(fs, backupPath) {
-    try {
-        var backup = {};
-        for (var i = 0; i < localStorage.length; i++) {
-            var k = localStorage.key(i);
-            if (k && k.indexOf('jx_') === 0) backup[k] = localStorage.getItem(k);
-        }
-        fs.writeFileSync(backupPath, JSON.stringify(backup));
-    } catch(e) {}
-}
-
-function restoreSettings(fs, backupPath) {
-    try {
-        if (!fs.existsSync(backupPath)) return;
-        var raw    = fs.readFileSync(backupPath, 'utf8');
-        var backup = JSON.parse(raw);
-        Object.keys(backup).forEach(function(k) { localStorage.setItem(k, backup[k]); });
-        try { fs.unlinkSync(backupPath); } catch(e) {}
-    } catch(e) {}
 }

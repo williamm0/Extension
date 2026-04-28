@@ -1,4 +1,4 @@
-// jx Tools v1.1.0
+// jx Tools v1.1.4
 
 function ok(msg)   { return JSON.stringify({ success: true,  message: msg }); }
 function fail(msg) { return JSON.stringify({ success: false, message: msg }); }
@@ -332,6 +332,21 @@ function jx_sequenceLayers(gapSec) {
 }
 
 // color
+
+function jx_pickThemeColor(initialHex) {
+    try {
+        var hex = String(initialHex || '#c09050').replace(/[^0-9a-f]/gi, '');
+        if (hex.length === 3) hex = hex.charAt(0)+hex.charAt(0)+hex.charAt(1)+hex.charAt(1)+hex.charAt(2)+hex.charAt(2);
+        if (hex.length !== 6) hex = 'c09050';
+        var picked = $.colorPicker(parseInt(hex, 16));
+        if (picked < 0) return JSON.stringify({ success: false, cancelled: true, message: 'Cancelled.' });
+        var out = picked.toString(16);
+        while (out.length < 6) out = '0' + out;
+        return JSON.stringify({ success: true, hex: '#' + out.slice(-6) });
+    } catch(e) {
+        return fail('Failed: ' + e.toString());
+    }
+}
 
 function jx_applyFFXPreset(presetPath) {
     var comp = getComp();
@@ -911,6 +926,46 @@ function jx_loopDuplicate(repeats) {
 }
 
 // update check
+
+function jx_renameLayers(findStr, replaceStr, prefix, suffix) {
+    var comp = getComp();
+    if (!comp) return fail('No active composition.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return fail('Select at least one layer.');
+    app.beginUndoGroup('jx: Rename Layers');
+    try {
+        var count = 0;
+        for (var i = 0; i < sel.length; i++) {
+            var name = sel[i].name;
+            if (findStr) {
+                var parts = name.split(findStr);
+                name = parts.join(replaceStr);
+            }
+            if (prefix) name = prefix + name;
+            if (suffix) name = name + suffix;
+            sel[i].name = name;
+            count++;
+        }
+        app.endUndoGroup();
+        return ok('Renamed ' + plural(count, 'layer') + '.');
+    } catch(e) {
+        app.endUndoGroup();
+        return fail('Failed: ' + e.toString());
+    }
+}
+
+function jx_writeFile(filePath, content) {
+    try {
+        var f = new File(filePath);
+        f.encoding = 'UTF-8';
+        f.open('w');
+        f.write(content);
+        f.close();
+        return ok('ok');
+    } catch(e) {
+        return fail('Failed: ' + e.toString());
+    }
+}
 
 function jx_fetchUpdateInfo() {
     try {
