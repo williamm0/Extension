@@ -2,8 +2,6 @@
 
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one. The panel is open source, so you can inspect how I built it.
 
-FILES ABOVE ARE PRE-RELEASE CODE!
-
 ---
 ## KNOWN BUGS & ERRORS
 
