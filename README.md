@@ -6,6 +6,7 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 ## KNOWN BUGS & ERRORS
 
 - Updater stuck at 0%
+- Theme color wheel not working 
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
