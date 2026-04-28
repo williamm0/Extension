@@ -54,6 +54,7 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Configurable label colors per layer type
 - Panel Sections: show or hide any section, if you never use FX tools or the easing editor, hide them
 - Auto-updates: checks GitHub on load, downloads and installs with a progress bar, backs up and restores your settings automatically. Option to include pre-releases
+- Editing timer which shows how long you've been editing for
 
 ---
 
