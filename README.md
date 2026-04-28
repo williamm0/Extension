@@ -12,7 +12,7 @@ FILES ABOVE ARE PRE-RELEASE CODE!
 - Update tool not working (only for updating to pre-release)
 - Easing not working
 
-All SHOULD be fixed in the pre-release, but I havent tested it yet.
+All should be fixed in the pre-release
 
 ---
 
