@@ -3,10 +3,8 @@
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one. The panel is open source, so you can inspect how I built it.
 
 ---
-## KNOWN BUGS & ERRORS 
+## NONE KNOWN BUGS & ERRORS 
 
-- Updater not working as expected **FIXED IN PRE-RELEASE** 
-- Theme color wheel not working **FIXED IN PRE-RELEASE** 
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
