@@ -44,7 +44,11 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Custom easing editor: a bezier graph you drag by hand, with twelve presets. Apply the curve to all keyframes on selected layers in one click. Save curves to a personal library
 
 **Settings**
-- Four accent colour themes
+- Color wheel: a 5th swatch next to the presets opens a full OS color picker; any hex color gets applied with derived soft/mid variants
+- Font selector: System / Mono / Serif in settings, applied via --font-ui CSS variable
+- Greeting: time-based ("good morning", "afternoon", "working late"…) with your name shown in the header; set your name in settings
+- Developer page: new </> icon in the header shows session action count, a live log of the last 30 tool calls with timestamps and ok/fail status, and a dump of all jx_* localStorage keys. Also has a "Clear All" button
+- Advanced section toggle: below the section checkboxes in settings, an "Advanced ›" expandable shows per-item checkboxes for every individual button/tool in the panel
 - Configurable label colors per layer type
 - Panel Sections: show or hide any section, if you never use FX tools or the easing editor, hide them
 - Auto-updates: checks GitHub on load, downloads and installs with a progress bar, backs up and restores your settings automatically. Option to include pre-releases
