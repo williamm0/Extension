@@ -7,16 +7,12 @@ FILES ABOVE ARE PRE-RELEASE CODE!
 ---
 ## KNOWN BUGS & ERRORS
 
-**V1.1.0:**
-- Beat detection not working as expected
-- Update tool not working (only for updating to pre-release)
-- Easing not working
-
-All should be fixed in the pre-release
+No currently known bugs.
+If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
 ---
 
-## What it does (v1.1.1)
+## What it does
 
 **Layers**
 - Precompose selected layers individually in one go, each into its own comp, trimmed to the exact in/out point
@@ -27,11 +23,12 @@ All should be fixed in the pre-release
 - Center Anchor: moves each layer's anchor point to comp center while keeping the layer visually in place
 - Null from Selection: creates a null at comp center and parents all selected layers to it
 - Sequence Layers: places selected layers end-to-end in time with an optional gap between each
+- Null from Selection: creates a null at comp center, spans the time range of your selection, and parents all selected layers to it
 
 **Animation**
 - Word-by-Word: splits a text layer by word, staggers in-points and fades in opacity per word (offset in ms, adjustable)
 - Beat Detection — two modes:
-  - **BPM**: analyses the audio layer in your comp, detects tempo via autocorrelation, and places comp markers at every beat. Sensitivity slider controls how strict the beat threshold is. Shows detected BPM and marker count
+  - **Beat Marking**: analyses the audio layer in your comp, detects tempo via autocorrelation, and places comp markers at every beat. Sensitivity slider controls how strict the beat threshold is. Shows detected BPM and marker count
   - **Frequency**: places markers separately for bass (20–250 Hz) and treble (4k+ Hz) hits. Each band has an independent threshold slider and minimum gap control. Markers are labeled in the AE timeline so you can tell them apart
 - Snap Keys to Markers: snaps selected keyframes to the nearest comp marker
 
@@ -51,7 +48,7 @@ All should be fixed in the pre-release
 **Settings**
 - Four accent colour themes
 - Configurable label colors per layer type
-- Panel Sections: show or hide any section — if you never use FX tools or the easing editor, hide them
+- Panel Sections: show or hide any section, if you never use FX tools or the easing editor, hide them
 - Auto-updates: checks GitHub on load, downloads and installs with a progress bar, backs up and restores your settings automatically. Option to include pre-releases
 
 ---
