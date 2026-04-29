@@ -58,7 +58,8 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 
 ## Install
 
-**[→ Download the installer here](https://github.com/user-attachments/files/27140882/Install.Mac.Windows.zip)**
+MacOS Installer
+Windows Installer
 
 Run `install.bat` on Windows or `install.command` on macOS. It fetches and installs the latest release automatically — you'll be asked whether you want the latest stable or a pre-release if one is available.
 
