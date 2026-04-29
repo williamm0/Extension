@@ -117,7 +117,7 @@ function applyInterfaceMode(mode) {
 // ── greeting ───────────────────────────────────────────────────────────────────
 
 var GREETINGS_MORNING = [
-    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', 'you're up early',
+    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', "you're up early",
     'locking in early is crazy 😭', 'mornin 💋', 'keyframes for breakfast?? 😭',
     'who are you editing this early?', 'we are so back', 'remember a watermark before rendering'
 ];
