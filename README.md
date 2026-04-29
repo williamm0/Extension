@@ -58,8 +58,7 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 
 ## Install
 
-MacOS Installer
-Windows Installer
+[MacOS and Windows Installer](https://github.com/williamm0/Extension/releases/tag/INSTALLER)
 
 Run `install.bat` on Windows or `install.command` on macOS. It fetches and installs the latest release automatically — you'll be asked whether you want the latest stable or a pre-release if one is available.
 
