@@ -5,6 +5,7 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 ---
 ## NONE KNOWN BUGS & ERRORS 
 
+- Center anchor not working
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
