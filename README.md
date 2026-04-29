@@ -5,8 +5,7 @@ A panel I built for my own workflow that ended up saving enough time I figured I
 ---
 ## NONE KNOWN BUGS & ERRORS 
 
-- Center anchor not working **FIXED IN PRE-RELEASE**
-- Updater not working...
+- No known bugs in the current stable build.
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
@@ -23,7 +22,6 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Center Anchor: moves each layer's anchor point to comp center while keeping the layer visually in place
 - Null from Selection: creates a null at comp center and parents all selected layers to it
 - Sequence Layers: places selected layers end-to-end in time with an optional gap between each
-- Null from Selection: creates a null at comp center, spans the time range of your selection, and parents all selected layers to it
 
 **Animation**
 - Word-by-Word: splits a text layer by word, staggers in-points and fades in opacity per word (offset in ms, adjustable)
@@ -40,20 +38,29 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Load any .ffx preset and apply it to a new adjustment layer at the top of your comp
 - Quick Presets page: save a collection of your go-to .ffx files and apply any of them with a single click
 
-**Keyframes**
+**Keyframes / Graphs**
 - Fit Keys to Clip: stretches selected keyframes to span the full layer duration without touching graph shapes or easing
 - Reverse Keyframes: reverses all keyframes on selected layers, swapping in/out interpolation too
-- Custom easing editor: a bezier graph you drag by hand, with twelve presets. Apply the curve to all keyframes on selected layers in one click. Save curves to a personal library
+- Custom easing editor: a bezier graph you drag by hand, with twelve presets. Apply the curve to all keyframes on selected layers in one click
+- Easier graph saving: the save button now sits directly under the graph maker instead of being hidden beside Apply
+- Saved graphs moved into their own Custom page, separate from the Premade graph presets
+- Saved graph cards are large icon-style previews like the premade graph buttons, with a size slider in Settings
+- Graph menus: create named custom graph menus, Flow-style, to organize saved curves
+- Transfer graphs from Flow and JerryFlow: import graph pages/libraries from the Flow or JerryFlow extension when found on disk
 
 **Settings**
 - Color wheel: a 5th swatch next to the presets opens a full OS color picker; any hex color gets applied with derived soft/mid variants
 - Font selector: System / Mono / Serif in settings, applied via --font-ui CSS variable
 - Greeting: time-based ("good morning", "afternoon", "working late"…) with your name shown in the header; set your name in settings
 - Developer page: new </> icon in the header shows session action count, a live log of the last 30 tool calls with timestamps and ok/fail status, and a dump of all jx_* localStorage keys. Also has a "Clear All" button
+- New dev tools: diagnostics, exports, host ping, graph/section data tools, UI smoke tests, settings backups/restores, storage validation/repair, update checks, and owner-only advanced maintenance tools
 - Advanced section toggle: below the section checkboxes in settings, an "Advanced ›" expandable shows per-item checkboxes for every individual button/tool in the panel
 - Configurable label colors per layer type
 - Panel Sections: show or hide any section, if you never use FX tools or the easing editor, hide them
-- Auto-updates: checks GitHub on load, downloads and installs with a progress bar, backs up and restores your settings automatically. Option to include pre-releases
+- Dropdown sections: every panel section can be opened/closed from its header so you do not have to scroll as much
+- Reorder sections: drag section headers to rearrange the panel order; your order is saved in preferences
+- Hide sections: right-click a section header or use Settings to hide entire sections you do not use
+- Auto-updates: checks GitHub on load, downloads and installs in-panel with percentage progress and a macOS-safe fallback updater. Option to include pre-releases
 - Editing timer which shows how long you've been editing for
 
 ---
