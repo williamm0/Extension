@@ -3,9 +3,9 @@
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one. The panel is open source, so you can inspect how I built it.
 
 ---
-## NONE KNOWN BUGS & ERRORS 
+## KNOWN BUGS & ERRORS 
 
-- No known bugs in the current stable build.
+- Update system not working, fixed in pre-release with a new system.
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
