@@ -629,7 +629,7 @@ footer a:hover { color: var(--text-muted); }
 }
 .version-tag::after,
 .brand-ver::after {
-    content: ' pre';
+    content: '';
     color: var(--accent);
     font-size: 8px;
     margin-left: 4px;
