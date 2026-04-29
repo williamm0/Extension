@@ -95,6 +95,7 @@ var FONTS = {
     system:    "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
     helvetica: "'Helvetica Neue', Helvetica, Arial, sans-serif",
     rounded:   "'SF Pro Rounded', 'Varela Round', 'Nunito', sans-serif",
+    dyslexia:  "'Atkinson Hyperlegible', 'OpenDyslexic', 'Lexend', 'Verdana', 'Arial', sans-serif",
     inter:     "'Inter', 'Segoe UI', system-ui, sans-serif",
     mono:      "'Menlo', 'Consolas', 'Courier New', monospace",
     serif:     "'Iowan Old Style', 'Palatino', 'Georgia', serif",
@@ -328,6 +329,7 @@ function escapeHtml(s) {
 function openDevView() {
     closeSettings();
     closePresetsView();
+    closeLayerLibView();
     document.getElementById('devView').classList.add('open');
     renderDevView();
 }
@@ -1130,6 +1132,9 @@ function bindUI() {
     document.getElementById('settingsBack').addEventListener('click', closeSettings);
     document.getElementById('presetsBtn').addEventListener('click', openPresetsView);
     document.getElementById('presetsBack').addEventListener('click', closePresetsView);
+    document.getElementById('layerLibBtn').addEventListener('click', openLayerLibView);
+    document.getElementById('layerLibBack').addEventListener('click', closeLayerLibView);
+    document.getElementById('btnSaveLayerStack').addEventListener('click', saveLayerStack);
     document.getElementById('devBtn').addEventListener('click', openDevView);
     document.getElementById('devBack').addEventListener('click', closeDevView);
     document.getElementById('devRefreshDiagnostics').addEventListener('click', refreshDiagnostics);
@@ -1215,6 +1220,10 @@ function bindUI() {
     }
 
     document.getElementById('btnCheckUpdate').addEventListener('click', manualCheckUpdate);
+    var forceTerminalUpdateBtn = document.getElementById('btnForceTerminalUpdate');
+    if (forceTerminalUpdateBtn) forceTerminalUpdateBtn.addEventListener('click', forceTerminalUpdate);
+    var openReleasePageBtn = document.getElementById('btnOpenReleasePage');
+    if (openReleasePageBtn) openReleasePageBtn.addEventListener('click', openLatestReleasePage);
 
     ['labelFootage', 'labelText', 'labelEffects'].forEach(function (id) {
         document.getElementById(id).addEventListener('change', saveLabelSettings);
@@ -1458,6 +1467,7 @@ function setPresetUnloaded() {
 function openPresetsView() {
     closeSettings();
     closeDevView();
+    closeLayerLibView();
     document.getElementById('presetsView').classList.add('open');
     renderPresetsList();
 }
@@ -1522,6 +1532,87 @@ function renderPresetsList() {
         wrap.appendChild(item);
     });
     list.appendChild(wrap);
+}
+
+// ── layer library ──────────────────────────────────────────────────────────────
+
+function openLayerLibView() {
+    closeSettings();
+    closeDevView();
+    closePresetsView();
+    document.getElementById('layerLibView').classList.add('open');
+    refreshLayerLibrary();
+}
+
+function closeLayerLibView() {
+    var view = document.getElementById('layerLibView');
+    if (view) view.classList.remove('open');
+}
+
+function saveLayerStack() {
+    var input = document.getElementById('layerLibName');
+    var name = (input && input.value.trim()) || ('Layer Stack ' + shortDate());
+    var safe = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_saveLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+        if (res && res.success) {
+            if (input) input.value = '';
+            refreshLayerLibrary();
+        }
+    });
+}
+
+function refreshLayerLibrary() {
+    cs.evalScript('jx_listLayerStacks()', function (result) {
+        var res = parseResult(result);
+        renderLayerLibrary(res && res.items ? res.items : []);
+    });
+}
+
+function renderLayerLibrary(items) {
+    var list = document.getElementById('layerLibList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items.length) {
+        list.innerHTML = '<div class="graph-empty">No layer stacks saved in this project yet.</div>';
+        return;
+    }
+    items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'layer-lib-item';
+        row.innerHTML = '<div class="layer-lib-main"><span class="layer-lib-name"></span><span class="layer-lib-meta">' + item.layers + ' layers · ' + item.duration + 's</span></div>';
+        row.querySelector('.layer-lib-name').textContent = item.name;
+        var apply = document.createElement('button');
+        apply.className = 'tool-btn small';
+        apply.textContent = 'Add';
+        apply.addEventListener('click', function () { applyLayerStack(item.id); });
+        var del = document.createElement('button');
+        del.className = 'tool-btn small danger';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () { deleteLayerStack(item.id); });
+        row.appendChild(apply);
+        row.appendChild(del);
+        list.appendChild(row);
+    });
+}
+
+function applyLayerStack(id) {
+    var safe = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_applyLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+    });
+}
+
+function deleteLayerStack(id) {
+    if (!confirm('Delete this saved layer stack?')) return;
+    var safe = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_deleteLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+        refreshLayerLibrary();
+    });
 }
 
 // ── save modal ─────────────────────────────────────────────────────────────────
@@ -1629,6 +1720,7 @@ function parseFlowFile(text, fallbackName) {
 function openSettings() {
     closePresetsView();
     closeDevView();
+    closeLayerLibView();
     document.getElementById('settingsView').classList.add('open');
     renderSettingsPreset();
 }

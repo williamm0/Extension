@@ -26,6 +26,11 @@
           <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
       </button>
+      <button class="icon-btn" id="layerLibBtn" title="Layer Library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 3 7l9 5 9-5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="searchBtn" title="Search tools">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -292,6 +297,32 @@
 
 </div>
 
+<!-- ── Layer Library view ─────────────────────────────────── -->
+<div id="layerLibView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="layerLibBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Layer Library</span>
+  </div>
+
+  <div class="settings-body">
+    <div class="settings-group">
+      <div class="settings-group-label">Save Selected Layers</div>
+      <div class="settings-path">Stores selected layers as a reusable stack inside this AE project — no .ffx needed.</div>
+      <input type="text" id="layerLibName" class="settings-text-input" placeholder="Stack name" autocomplete="off" spellcheck="false">
+      <button class="tool-btn small accent" id="btnSaveLayerStack" style="margin-top:7px">Save Selected Layer Stack</button>
+    </div>
+    <div class="settings-group">
+      <div class="settings-group-label">Saved Stacks</div>
+      <div class="layer-lib-list" id="layerLibList"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── First-run onboarding ─────────────────────────────── -->
 <div id="onboardingView" class="onboarding-view hidden">
   <div class="onboarding-card">
@@ -343,6 +374,7 @@
         <option value="system">System</option>
         <option value="helvetica">Helvetica</option>
         <option value="rounded">Rounded</option>
+        <option value="dyslexia">Dyslexia Friendly</option>
         <option value="inter">Inter</option>
         <option value="mono">Mono</option>
         <option value="serif">Serif</option>
@@ -451,6 +483,7 @@
           <option value="system">System</option>
           <option value="helvetica">Helvetica</option>
           <option value="rounded">Rounded</option>
+          <option value="dyslexia">Dyslexia Friendly</option>
           <option value="inter">Inter</option>
           <option value="mono">Mono</option>
           <option value="serif">Serif</option>
@@ -623,6 +656,8 @@
       <div class="settings-group-label">Updates</div>
       <label class="checkbox-label"><input type="checkbox" id="checkPrerelease"> Include pre-releases</label>
       <button class="tool-btn small" id="btnCheckUpdate">Check for Updates</button>
+      <button class="tool-btn small" id="btnForceTerminalUpdate">Open Installer App</button>
+      <button class="tool-btn small" id="btnOpenReleasePage">Download Installer</button>
     </div>
 
     <div class="settings-footer">

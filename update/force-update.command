@@ -103,4 +103,6 @@ chmod +x "$EXT_DIR/update/"*.command 2>/dev/null
 rm -f "$INFO_FILE"
 
 echo "Done: jx Tools $TAG installed. Restart After Effects."
+echo "Press Return to close this window."
+read -r _
 exit 0

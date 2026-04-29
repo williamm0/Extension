@@ -1,4 +1,4 @@
-// jx Tools v1.1.5
+// jx Tools v1.1.6-pre
 
 function ok(msg)   { return JSON.stringify({ success: true,  message: msg }); }
 function fail(msg) { return JSON.stringify({ success: false, message: msg }); }
@@ -18,6 +18,29 @@ function findItemByName(name) {
 
 function plural(n, word) {
     return n + ' ' + word + (n === 1 ? '' : 's');
+}
+
+function escapeJsonString(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+}
+
+function getLayerLibraryFolder(create) {
+    var name = 'jx Layer Library';
+    for (var i = 1; i <= app.project.numItems; i++) {
+        var item = app.project.item(i);
+        if (item instanceof FolderItem && item.name === name) return item;
+    }
+    return create ? app.project.items.addFolder(name) : null;
+}
+
+function findLayerLibraryComp(id) {
+    var folder = getLayerLibraryFolder(false);
+    if (!folder) return null;
+    for (var i = 1; i <= app.project.numItems; i++) {
+        var item = app.project.item(i);
+        if (item instanceof CompItem && item.parentFolder === folder && String(item.comment) === String(id)) return item;
+    }
+    return null;
 }
 
 function vecFromPoint(pt, fallbackZ) {
@@ -958,6 +981,101 @@ function jx_loopDuplicate(repeats) {
         }
         app.endUndoGroup();
         return ok('Looped ' + plural(count, 'layer') + ' ×' + repeats + '.');
+    } catch(e) {
+        app.endUndoGroup();
+        return fail('Failed: ' + e.toString());
+    }
+}
+
+// layer library
+
+function jx_saveLayerStack(name) {
+    var comp = getComp();
+    if (!comp) return fail('No active composition.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return fail('Select at least one layer to save.');
+    name = name || ('Layer Stack ' + (new Date()).getTime());
+    app.beginUndoGroup('jx: Save Layer Stack');
+    try {
+        var folder = getLayerLibraryFolder(true);
+        var minIn = sel[0].inPoint, maxOut = sel[0].outPoint;
+        for (var i = 0; i < sel.length; i++) {
+            if (sel[i].inPoint < minIn) minIn = sel[i].inPoint;
+            if (sel[i].outPoint > maxOut) maxOut = sel[i].outPoint;
+        }
+        var dur = Math.max(comp.frameDuration, maxOut - minIn);
+        var lib = app.project.items.addComp('jxLib_' + name, comp.width, comp.height, comp.pixelAspect, dur, comp.frameRate);
+        lib.parentFolder = folder;
+        lib.comment = 'jxlib_' + (new Date()).getTime();
+        var layers = [];
+        for (var i = 0; i < sel.length; i++) layers.push(sel[i]);
+        layers.sort(function(a, b) { return a.index - b.index; });
+        for (var i = layers.length - 1; i >= 0; i--) {
+            layers[i].copyToComp(lib);
+            var copied = lib.layer(1);
+            try { copied.startTime -= minIn; } catch(e) {}
+            try { copied.inPoint -= minIn; } catch(e) {}
+            try { copied.outPoint -= minIn; } catch(e) {}
+        }
+        app.endUndoGroup();
+        return ok('Saved ' + plural(sel.length, 'layer') + ' as "' + name + '".');
+    } catch(e) {
+        app.endUndoGroup();
+        return fail('Failed: ' + e.toString());
+    }
+}
+
+function jx_listLayerStacks() {
+    try {
+        var folder = getLayerLibraryFolder(false);
+        var items = [];
+        if (folder) {
+            for (var i = 1; i <= app.project.numItems; i++) {
+                var item = app.project.item(i);
+                if (item instanceof CompItem && item.parentFolder === folder && String(item.comment).indexOf('jxlib_') === 0) {
+                    var nm = item.name.replace(/^jxLib_/, '');
+                    items.push('{"id":"' + escapeJsonString(item.comment) + '","name":"' + escapeJsonString(nm) + '","layers":' + item.numLayers + ',"duration":' + item.duration.toFixed(3) + '}');
+                }
+            }
+        }
+        return '{"success":true,"items":[' + items.join(',') + ']}';
+    } catch(e) {
+        return fail('Failed: ' + e.toString());
+    }
+}
+
+function jx_applyLayerStack(id) {
+    var comp = getComp();
+    if (!comp) return fail('No active composition.');
+    var lib = findLayerLibraryComp(id);
+    if (!lib) return fail('Layer stack not found.');
+    app.beginUndoGroup('jx: Apply Layer Stack');
+    try {
+        var now = comp.time;
+        for (var i = lib.numLayers; i >= 1; i--) {
+            lib.layer(i).copyToComp(comp);
+            var copied = comp.layer(1);
+            try { copied.startTime += now; } catch(e) {}
+            try { copied.inPoint += now; } catch(e) {}
+            try { copied.outPoint += now; } catch(e) {}
+        }
+        app.endUndoGroup();
+        return ok('Added "' + lib.name.replace(/^jxLib_/, '') + '" to the comp.');
+    } catch(e) {
+        app.endUndoGroup();
+        return fail('Failed: ' + e.toString());
+    }
+}
+
+function jx_deleteLayerStack(id) {
+    var lib = findLayerLibraryComp(id);
+    if (!lib) return fail('Layer stack not found.');
+    app.beginUndoGroup('jx: Delete Layer Stack');
+    try {
+        var name = lib.name.replace(/^jxLib_/, '');
+        lib.remove();
+        app.endUndoGroup();
+        return ok('Deleted "' + name + '".');
     } catch(e) {
         app.endUndoGroup();
         return fail('Failed: ' + e.toString());
