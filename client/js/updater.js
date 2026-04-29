@@ -2,6 +2,8 @@ var _updateInfo = null; // { tag, downloadUrl, htmlUrl, prerelease }
 var _activeRequest = null;
 
 function initUpdater() {
+    wireUpdateDismiss();
+    if (isUpdateSnoozed()) return;
     runUpdateCheck(false, null);
 }
 
@@ -109,7 +111,7 @@ function processReleaseJson(json, wasAllReleases) {
         if (!release) return false;
         var tag    = release.tag_name || '';
         var latest = tag.replace(/^v/i, '');
-        if (!isNewerVersion(latest, CURRENT_VERSION)) return false;
+        if (!isNewerRelease(latest, CURRENT_VERSION, !!release.prerelease)) return false;
         var dlUrl = release.zipball_url || null;
         if (release.assets && release.assets.length > 0) {
             dlUrl = release.assets[0].browser_download_url;
@@ -134,7 +136,7 @@ function pickNewestRelease(releases) {
     return newest;
 }
 
-function isNewerVersion(a, b) {
+function isNewerRelease(a, b, releaseIsPrerelease) {
     var pa = normalizeVersionParts(a);
     var pb = normalizeVersionParts(b);
     for (var i = 0; i < 3; i++) {
@@ -142,9 +144,11 @@ function isNewerVersion(a, b) {
         if (na > nb) return true;
         if (na < nb) return false;
     }
-    var apre = /pre|beta|alpha|rc/i.test(String(a || ''));
-    var bpre = /pre|beta|alpha|rc/i.test(String(b || ''));
-    return !apre && bpre;
+    return false;
+}
+
+function isNewerVersion(a, b) {
+    return isNewerRelease(a, b, /pre|beta|alpha|rc/i.test(String(a || '')));
 }
 
 function normalizeVersionParts(v) {
@@ -154,14 +158,15 @@ function normalizeVersionParts(v) {
 
 function showUpdateBanner() {
     if (!_updateInfo) return;
+    if (isUpdateDismissed(_updateInfo.tag)) return;
     var banner = document.getElementById('updateBanner');
     var btn    = document.getElementById('btnUpdate');
     if (!banner) return;
     banner.style.display = 'flex';
     banner.classList.remove('error', 'done', 'working');
-    setBannerText('Update available: ' + _updateInfo.tag + (_updateInfo.prerelease ? ' (pre)' : ''));
+    setBannerText('Update ' + _updateInfo.tag);
     setProgress(0, false);
-    if (btn) { btn.textContent = 'Update'; btn.disabled = false; btn.style.display = ''; btn.onclick = startUpdate; }
+    if (btn) { btn.textContent = 'Installer'; btn.disabled = false; btn.style.display = ''; btn.onclick = startUpdate; }
 }
 
 function setBannerText(text) {
@@ -177,20 +182,35 @@ function setBannerText(text) {
     if (/New in This Release|Layer Library|Short Release Blurb/i.test(safe)) {
         safe = 'Installer page opened. Use the installed app or download the installer.';
     }
-    if (safe.length > 120) safe = safe.slice(0, 117) + '...';
+    if (safe.length > 42) safe = safe.slice(0, 39) + '...';
     el.textContent = safe;
 }
 
-function setProgress(pct, visible) {
-    pct = Math.max(0, Math.min(100, Math.round(pct || 0)));
-    var bar = document.getElementById('updateProgressBar');
-    var banner = document.getElementById('updateBanner');
-    if (bar) {
-        bar.style.width   = visible ? pct + '%' : '0%';
-        bar.style.opacity = visible ? '1' : '0';
-    }
-    if (banner) banner.style.setProperty('--update-pct', pct + '%');
+function wireUpdateDismiss() {
+    var close = document.getElementById('btnDismissUpdate');
+    if (!close || close._jxWired) return;
+    close._jxWired = true;
+    close.addEventListener('click', dismissUpdateBanner);
 }
+
+function dismissUpdateBanner() {
+    var tag = (_updateInfo && _updateInfo.tag) || 'manual';
+    try { localStorage.setItem('jx_update_dismissed_' + tag, '1'); } catch(e) {}
+    var banner = document.getElementById('updateBanner');
+    if (banner) banner.style.display = 'none';
+}
+
+function isUpdateDismissed(tag) {
+    try { return localStorage.getItem('jx_update_dismissed_' + tag) === '1'; } catch(e) {}
+    return false;
+}
+
+function isUpdateSnoozed() {
+    try { return Number(localStorage.getItem('jx_update_snooze_until') || 0) > Date.now(); } catch(e) {}
+    return false;
+}
+
+function setProgress(pct, visible) { }
 
 function startUpdate() {
     openInstallerOrDownload();
@@ -206,27 +226,27 @@ function openLatestReleasePage() {
 
 function openInstallerOrDownload() {
     var btn = document.getElementById('btnUpdate') || document.getElementById('btnForceTerminalUpdate');
-    if (btn) { btn.disabled = true; btn.textContent = 'Opening Installer...'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Opening...'; }
     var banner = document.getElementById('updateBanner');
     if (banner) {
         banner.style.display = 'flex';
         banner.classList.remove('error', 'done');
         banner.classList.add('working');
     }
-    setBannerText('Opening jx Tools Installer app...');
+    setBannerText('Opening installer...');
     setProgress(8, true);
 
     openInstalledInstaller(function(opened) {
         if (opened) {
             setProgress(100, true);
-            setBannerText('jx Tools Installer opened. Use it to install the latest version.');
-            resetUpdateButtons('Open Installer');
+            setBannerText('Installer opened.');
+            resetUpdateButtons('Installer');
             return;
         }
-        setBannerText('Installer app not found. Opening installer download page...');
+        setBannerText('Opening installer download...');
         setProgress(100, true);
         openInstallerDownloadPage();
-        resetUpdateButtons('Open Installer');
+        resetUpdateButtons('Installer');
     });
 }
 
@@ -262,7 +282,7 @@ function openInstallerDownloadPage() {
 
 function resetUpdateButtons(label) {
     var updateBtn = document.getElementById('btnUpdate');
-    if (updateBtn) { updateBtn.disabled = false; updateBtn.textContent = label || 'Open Installer'; updateBtn.onclick = startUpdate; }
+    if (updateBtn) { updateBtn.disabled = false; updateBtn.textContent = label || 'Installer'; updateBtn.onclick = startUpdate; }
     var forceBtn = document.getElementById('btnForceTerminalUpdate');
     if (forceBtn) { forceBtn.disabled = false; forceBtn.textContent = 'Open Installer App'; }
 }
@@ -300,13 +320,13 @@ function openWebFallback(msg) {
         banner.classList.remove('error', 'working');
         banner.classList.add('done');
     }
-    setBannerText('Installer app was not found, so I opened the installer download page.');
+    setBannerText('Opened installer download.');
     setProgress(100, true);
     openInstallerDownloadPage();
     var updateBtn = document.getElementById('btnUpdate');
     if (updateBtn) {
         updateBtn.disabled = false;
-        updateBtn.textContent = 'Open Installer';
+        updateBtn.textContent = 'Installer';
         updateBtn.onclick = openInstallerOrDownload;
     }
     var forceBtn = document.getElementById('btnForceTerminalUpdate');
@@ -490,7 +510,7 @@ function setUpdateError(msg) {
         banner.classList.remove('working', 'done');
         banner.classList.add('error');
     }
-    setBannerText('Panel update could not finish. Open the installer app or download it.');
+    setBannerText('Use installer app or download.');
     setProgress(0, false);
     var btn = document.getElementById('btnUpdate');
     if (btn) { btn.textContent = 'Open Installer'; btn.disabled = false; btn.style.display = ''; btn.onclick = openInstallerOrDownload; }

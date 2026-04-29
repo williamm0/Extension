@@ -989,6 +989,217 @@ function jx_loopDuplicate(repeats) {
 
 // layer library
 
+function jx_layerLibraryDiskFolder(create) {
+    var base = new Folder(Folder.userData.fsName + '/jx Tools/Layer Library');
+    if (!base.exists && create) base.create();
+    return base;
+}
+
+function jx_layerStackFile(id) {
+    var folder = jx_layerLibraryDiskFolder(true);
+    return new File(folder.fsName + '/' + String(id).replace(/[^A-Za-z0-9_\-]/g, '_') + '.json');
+}
+
+function jx_readTextFile(file) {
+    if (!file || !file.exists) return null;
+    file.encoding = 'UTF-8';
+    if (!file.open('r')) return null;
+    var text = file.read();
+    file.close();
+    return text;
+}
+
+function jx_writeTextFile(file, text) {
+    file.encoding = 'UTF-8';
+    if (!file.open('w')) throw new Error('Could not write layer stack file.');
+    file.write(text);
+    file.close();
+}
+
+function jx_parseJson(text) {
+    if (typeof JSON === 'undefined' || !JSON.parse) throw new Error('JSON is unavailable in this After Effects build.');
+    return JSON.parse(text);
+}
+
+function jx_toJson(obj) {
+    if (typeof JSON === 'undefined' || !JSON.stringify) throw new Error('JSON is unavailable in this After Effects build.');
+    return JSON.stringify(obj, null, 2);
+}
+
+function jx_safeValue(value) {
+    if (value === null || value === undefined) return null;
+    var t = typeof value;
+    if (t === 'number' || t === 'string' || t === 'boolean') return value;
+    if (value instanceof Array) {
+        var arr = [];
+        for (var i = 0; i < value.length; i++) arr.push(jx_safeValue(value[i]));
+        return arr;
+    }
+    try {
+        if (value.text !== undefined) {
+            return {
+                __textDocument: true,
+                text: String(value.text || ''),
+                font: String(value.font || ''),
+                fontSize: Number(value.fontSize || 0),
+                fillColor: jx_safeValue(value.fillColor),
+                applyFill: !!value.applyFill,
+                justification: String(value.justification || '')
+            };
+        }
+    } catch(e) {}
+    return null;
+}
+
+function jx_applySafeValue(prop, value, timeOffset) {
+    if (value === null || value === undefined) return;
+    try {
+        if (value && value.__textDocument) {
+            var td = prop.value;
+            td.text = value.text || '';
+            if (value.font) try { td.font = value.font; } catch(e) {}
+            if (value.fontSize) try { td.fontSize = value.fontSize; } catch(e) {}
+            if (value.fillColor) try { td.fillColor = value.fillColor; } catch(e) {}
+            try { td.applyFill = value.applyFill; } catch(e) {}
+            prop.setValue(td);
+            return;
+        }
+        prop.setValue(value);
+    } catch(e) {}
+}
+
+function jx_serializeProperty(prop, baseTime) {
+    var data = { name: prop.name, matchName: prop.matchName, index: prop.propertyIndex };
+    if (prop.propertyType === PropertyType.PROPERTY) {
+        data.value = jx_safeValue(prop.value);
+        data.keys = [];
+        try {
+            for (var k = 1; k <= prop.numKeys; k++) {
+                data.keys.push({ time: prop.keyTime(k) - baseTime, value: jx_safeValue(prop.keyValue(k)) });
+            }
+        } catch(e) {}
+    } else if (prop.numProperties && prop.numProperties > 0) {
+        data.children = [];
+        for (var i = 1; i <= prop.numProperties; i++) {
+            try { data.children.push(jx_serializeProperty(prop.property(i), baseTime)); } catch(e) {}
+        }
+    }
+    return data;
+}
+
+function jx_applyPropertyData(group, data, timeOffset) {
+    if (!group || !data) return;
+    var target = null;
+    try { if (data.matchName) target = group.property(data.matchName); } catch(e) {}
+    if (!target) try { if (data.name) target = group.property(data.name); } catch(e) {}
+    if (!target && data.index) try { target = group.property(data.index); } catch(e) {}
+    if (!target) return;
+    if (data.children && data.children.length) {
+        for (var i = 0; i < data.children.length; i++) jx_applyPropertyData(target, data.children[i], timeOffset);
+        return;
+    }
+    try {
+        if (data.keys && data.keys.length) {
+            while (target.numKeys > 0) target.removeKey(target.numKeys);
+            for (var k = 0; k < data.keys.length; k++) {
+                var key = data.keys[k];
+                if (key.value !== null && key.value !== undefined) target.setValueAtTime(timeOffset + key.time, key.value);
+            }
+        } else {
+            jx_applySafeValue(target, data.value, timeOffset);
+        }
+    } catch(e) {}
+}
+
+function jx_layerKind(layer) {
+    try { if (layer.nullLayer) return 'null'; } catch(e) {}
+    try { if (layer.matchName === 'ADBE Text Layer') return 'text'; } catch(e) {}
+    try { if (layer.matchName === 'ADBE Vector Layer') return 'shape'; } catch(e) {}
+    try { if (layer.adjustmentLayer) return 'adjustment'; } catch(e) {}
+    try { if (layer.source && layer.source.mainSource instanceof SolidSource) return 'solid'; } catch(e) {}
+    return 'layer';
+}
+
+function jx_serializeLayer(layer, minIn) {
+    var kind = jx_layerKind(layer);
+    var data = {
+        name: layer.name,
+        kind: kind,
+        label: layer.label,
+        startTime: layer.startTime - minIn,
+        inPoint: layer.inPoint - minIn,
+        outPoint: layer.outPoint - minIn,
+        stretch: layer.stretch,
+        enabled: layer.enabled,
+        shy: layer.shy,
+        solo: layer.solo,
+        locked: false,
+        adjustmentLayer: false,
+        threeDLayer: false,
+        guideLayer: false,
+        blendMode: null,
+        transform: [],
+        effects: []
+    };
+    try { data.locked = layer.locked; } catch(e) {}
+    try { data.adjustmentLayer = layer.adjustmentLayer; } catch(e) {}
+    try { data.threeDLayer = layer.threeDLayer; } catch(e) {}
+    try { data.guideLayer = layer.guideLayer; } catch(e) {}
+    try { data.blendMode = layer.blendingMode; } catch(e) {}
+    try {
+        if (layer.source && layer.source.mainSource instanceof SolidSource) {
+            data.solid = {
+                color: jx_safeValue(layer.source.mainSource.color),
+                width: layer.source.width,
+                height: layer.source.height,
+                pixelAspect: layer.source.pixelAspect
+            };
+        }
+    } catch(e) {}
+    try {
+        if (kind === 'text') data.text = jx_safeValue(layer.property('ADBE Text Properties').property('ADBE Text Document').value);
+    } catch(e) {}
+    try {
+        var tx = layer.property('ADBE Transform Group');
+        for (var t = 1; t <= tx.numProperties; t++) data.transform.push(jx_serializeProperty(tx.property(t), minIn));
+    } catch(e) {}
+    try {
+        var fx = layer.property('ADBE Effect Parade');
+        for (var f = 1; f <= fx.numProperties; f++) data.effects.push(jx_serializeProperty(fx.property(f), minIn));
+    } catch(e) {}
+    return data;
+}
+
+function jx_createLayerFromData(comp, data, duration) {
+    var layer = null;
+    var name = data.name || 'Saved Layer';
+    var dur = Math.max(comp.frameDuration, duration || comp.duration || 1);
+    try {
+        if (data.kind === 'text') {
+            layer = comp.layers.addText((data.text && data.text.text) || name);
+        } else if (data.kind === 'shape') {
+            layer = comp.layers.addShape();
+        } else if (data.kind === 'null') {
+            layer = comp.layers.addNull(dur);
+        } else {
+            var solid = data.solid || {};
+            layer = comp.layers.addSolid(solid.color || [1, 1, 1], name, solid.width || comp.width, solid.height || comp.height, solid.pixelAspect || comp.pixelAspect, dur);
+        }
+    } catch(e) {
+        layer = comp.layers.addSolid([1, 1, 1], name, comp.width, comp.height, comp.pixelAspect, dur);
+    }
+    try { layer.name = name; } catch(e) {}
+    try { layer.label = data.label; } catch(e) {}
+    try { layer.enabled = data.enabled; } catch(e) {}
+    try { layer.shy = data.shy; } catch(e) {}
+    try { layer.solo = data.solo; } catch(e) {}
+    try { layer.threeDLayer = data.threeDLayer; } catch(e) {}
+    try { layer.guideLayer = data.guideLayer; } catch(e) {}
+    try { layer.adjustmentLayer = !!data.adjustmentLayer || data.kind === 'adjustment'; } catch(e) {}
+    try { if (data.blendMode !== null) layer.blendingMode = data.blendMode; } catch(e) {}
+    return layer;
+}
+
 function jx_saveLayerStack(name) {
     var comp = getComp();
     if (!comp) return fail('No active composition.');
@@ -997,26 +1208,28 @@ function jx_saveLayerStack(name) {
     name = name || ('Layer Stack ' + (new Date()).getTime());
     app.beginUndoGroup('jx: Save Layer Stack');
     try {
-        var folder = getLayerLibraryFolder(true);
         var minIn = sel[0].inPoint, maxOut = sel[0].outPoint;
         for (var i = 0; i < sel.length; i++) {
             if (sel[i].inPoint < minIn) minIn = sel[i].inPoint;
             if (sel[i].outPoint > maxOut) maxOut = sel[i].outPoint;
         }
-        var dur = Math.max(comp.frameDuration, maxOut - minIn);
-        var lib = app.project.items.addComp('jxLib_' + name, comp.width, comp.height, comp.pixelAspect, dur, comp.frameRate);
-        lib.parentFolder = folder;
-        lib.comment = 'jxlib_' + (new Date()).getTime();
         var layers = [];
         for (var i = 0; i < sel.length; i++) layers.push(sel[i]);
         layers.sort(function(a, b) { return a.index - b.index; });
-        for (var i = layers.length - 1; i >= 0; i--) {
-            layers[i].copyToComp(lib);
-            var copied = lib.layer(1);
-            try { copied.startTime -= minIn; } catch(e) {}
-            try { copied.inPoint -= minIn; } catch(e) {}
-            try { copied.outPoint -= minIn; } catch(e) {}
+        var data = {
+            id: 'jxlib_' + (new Date()).getTime(),
+            name: name,
+            created: (new Date()).toUTCString(),
+            comp: { width: comp.width, height: comp.height, pixelAspect: comp.pixelAspect, frameRate: comp.frameRate },
+            duration: Math.max(comp.frameDuration, maxOut - minIn),
+            layers: [],
+            preview: []
+        };
+        for (var l = 0; l < layers.length; l++) {
+            data.layers.push(jx_serializeLayer(layers[l], minIn));
+            data.preview.push({ name: layers[l].name, kind: jx_layerKind(layers[l]) });
         }
+        jx_writeTextFile(jx_layerStackFile(data.id), jx_toJson(data));
         app.endUndoGroup();
         return ok('Saved ' + plural(sel.length, 'layer') + ' as "' + name + '".');
     } catch(e) {
@@ -1027,14 +1240,28 @@ function jx_saveLayerStack(name) {
 
 function jx_listLayerStacks() {
     try {
-        var folder = getLayerLibraryFolder(false);
         var items = [];
-        if (folder) {
-            for (var i = 1; i <= app.project.numItems; i++) {
-                var item = app.project.item(i);
-                if (item instanceof CompItem && item.parentFolder === folder && String(item.comment).indexOf('jxlib_') === 0) {
+        var folder = jx_layerLibraryDiskFolder(false);
+        if (folder && folder.exists) {
+            var files = folder.getFiles('*.json');
+            for (var i = 0; i < files.length; i++) {
+                try {
+                    var data = jx_parseJson(jx_readTextFile(files[i]));
+                    var preview = [];
+                    if (data.preview) {
+                        for (var p = 0; p < data.preview.length; p++) preview.push('{"name":"' + escapeJsonString(data.preview[p].name || '') + '","kind":"' + escapeJsonString(data.preview[p].kind || 'layer') + '"}');
+                    }
+                    items.push('{"id":"' + escapeJsonString(data.id) + '","name":"' + escapeJsonString(data.name) + '","layers":' + (data.layers ? data.layers.length : 0) + ',"duration":' + Number(data.duration || 0).toFixed(3) + ',"preview":[' + preview.join(',') + ']}');
+                } catch(e) {}
+            }
+        }
+        var projectFolder = getLayerLibraryFolder(false);
+        if (projectFolder) {
+            for (var j = 1; j <= app.project.numItems; j++) {
+                var item = app.project.item(j);
+                if (item instanceof CompItem && item.parentFolder === projectFolder && String(item.comment).indexOf('jxlib_') === 0) {
                     var nm = item.name.replace(/^jxLib_/, '');
-                    items.push('{"id":"' + escapeJsonString(item.comment) + '","name":"' + escapeJsonString(nm) + '","layers":' + item.numLayers + ',"duration":' + item.duration.toFixed(3) + '}');
+                    items.push('{"id":"' + escapeJsonString(item.comment) + '","name":"' + escapeJsonString(nm) + '","layers":' + item.numLayers + ',"duration":' + item.duration.toFixed(3) + ',"preview":[]}');
                 }
             }
         }
@@ -1047,17 +1274,55 @@ function jx_listLayerStacks() {
 function jx_applyLayerStack(id) {
     var comp = getComp();
     if (!comp) return fail('No active composition.');
+    var file = jx_layerStackFile(id);
+    if (file.exists) {
+        app.beginUndoGroup('jx: Apply Layer Stack');
+        try {
+            var data = jx_parseJson(jx_readTextFile(file));
+            var now = comp.time;
+            var layers = data.layers || [];
+            for (var i = layers.length - 1; i >= 0; i--) {
+                var ld = layers[i];
+                var layer = jx_createLayerFromData(comp, ld, data.duration);
+                try { layer.startTime = now + Number(ld.startTime || 0); } catch(e) {}
+                try { layer.inPoint = now + Number(ld.inPoint || 0); } catch(e) {}
+                try { layer.outPoint = now + Number(ld.outPoint || data.duration || comp.duration); } catch(e) {}
+                try { layer.stretch = ld.stretch; } catch(e) {}
+                try {
+                    var tx = layer.property('ADBE Transform Group');
+                    for (var t = 0; t < ld.transform.length; t++) jx_applyPropertyData(tx, ld.transform[t], now);
+                } catch(e) {}
+                try {
+                    var fx = layer.property('ADBE Effect Parade');
+                    for (var f = 0; f < ld.effects.length; f++) {
+                        var fxData = ld.effects[f];
+                        var newFx = null;
+                        try { newFx = fx.addProperty(fxData.matchName); } catch(e) {}
+                        if (newFx && fxData.children) {
+                            for (var c = 0; c < fxData.children.length; c++) jx_applyPropertyData(newFx, fxData.children[c], now);
+                        }
+                    }
+                } catch(e) {}
+                try { layer.locked = ld.locked; } catch(e) {}
+            }
+            app.endUndoGroup();
+            return ok('Added "' + data.name + '" to the comp.');
+        } catch(e) {
+            app.endUndoGroup();
+            return fail('Failed: ' + e.toString());
+        }
+    }
     var lib = findLayerLibraryComp(id);
     if (!lib) return fail('Layer stack not found.');
     app.beginUndoGroup('jx: Apply Layer Stack');
     try {
-        var now = comp.time;
-        for (var i = lib.numLayers; i >= 1; i--) {
-            lib.layer(i).copyToComp(comp);
+        var nowLegacy = comp.time;
+        for (var l = lib.numLayers; l >= 1; l--) {
+            lib.layer(l).copyToComp(comp);
             var copied = comp.layer(1);
-            try { copied.startTime += now; } catch(e) {}
-            try { copied.inPoint += now; } catch(e) {}
-            try { copied.outPoint += now; } catch(e) {}
+            try { copied.startTime += nowLegacy; } catch(e) {}
+            try { copied.inPoint += nowLegacy; } catch(e) {}
+            try { copied.outPoint += nowLegacy; } catch(e) {}
         }
         app.endUndoGroup();
         return ok('Added "' + lib.name.replace(/^jxLib_/, '') + '" to the comp.');
@@ -1068,19 +1333,32 @@ function jx_applyLayerStack(id) {
 }
 
 function jx_deleteLayerStack(id) {
+    var file = jx_layerStackFile(id);
+    if (file.exists) {
+        try {
+            var data = jx_parseJson(jx_readTextFile(file));
+            var name = data.name || 'Layer Stack';
+            file.remove();
+            return ok('Deleted "' + name + '".');
+        } catch(e) {
+            try { file.remove(); } catch(err) {}
+            return ok('Deleted layer stack.');
+        }
+    }
     var lib = findLayerLibraryComp(id);
     if (!lib) return fail('Layer stack not found.');
     app.beginUndoGroup('jx: Delete Layer Stack');
     try {
-        var name = lib.name.replace(/^jxLib_/, '');
+        var legacyName = lib.name.replace(/^jxLib_/, '');
         lib.remove();
         app.endUndoGroup();
-        return ok('Deleted "' + name + '".');
+        return ok('Deleted "' + legacyName + '".');
     } catch(e) {
         app.endUndoGroup();
         return fail('Failed: ' + e.toString());
     }
 }
+
 
 // update check
 

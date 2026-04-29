@@ -175,7 +175,7 @@ var onboardStep = 0;
 var ONBOARD_STEPS = [
     { title: 'Let me set this up', sub: 'First, tell me what name to use in the header.' },
     { title: 'Pick the colour', sub: 'I’ll apply it live so you can feel the difference.' },
-    { title: 'Choose the UI look', sub: 'Classic, Soft, or Compact — the panel updates while you pick.' },
+    { title: 'Choose the UI look', sub: 'Classic, Soft, or Compact - the panel updates while you pick.' },
     { title: 'Pick the font', sub: 'This changes the whole panel typography instantly.' },
     { title: 'Choose what shows', sub: 'Hide sections you do not care about. You can change this later.' }
 ];
@@ -290,7 +290,7 @@ function finishOnboarding(skipped) {
     var view = document.getElementById('onboardingView');
     if (view) view.classList.add('hidden');
     applyGreeting();
-    toast(skipped ? 'Skipped setup — defaults are on.' : 'Setup saved — go make something insane 💅', 'success');
+    toast(skipped ? 'Skipped setup - defaults are on.' : 'Setup saved - go make something insane 💅', 'success');
 }
 
 // ── dev page ───────────────────────────────────────────────────────────────────
@@ -308,10 +308,10 @@ var OWNER_SALT = 'fcd355c89361c9ad21284f00e5a24121';
 var OWNER_HASH = 'c0d9dda440d0a80adb0f095d0aa9facff47c6d5d120ecddb7a82eccda34d6f3c';
 var lastDevError = '';
 var GRASS_NUDGES = [
-    'You\'ve been editing for over an hour — definitely touch grass soon 🌿',
+    'You\'ve been editing for over an hour - definitely touch grass soon 🌿',
     'Tiny human reminder: stretch, blink, drink water, maybe touch grass 😊',
     'The pixels can wait 2 minutes. Your spine would appreciate it 🌱',
-    'Over an hour in — heroic, but grass is calling softly 🌿',
+    'Over an hour in - heroic, but grass is calling softly 🌿',
     'Quick break suggestion: stand up and let your eyes reboot ✨',
     'Editing marathon detected. Touch grass mode is highly recommended 😄',
     'Your keyframes are safe. Go breathe some outside air for a sec 🌤️'
@@ -1135,6 +1135,8 @@ function bindUI() {
     document.getElementById('layerLibBtn').addEventListener('click', openLayerLibView);
     document.getElementById('layerLibBack').addEventListener('click', closeLayerLibView);
     document.getElementById('btnSaveLayerStack').addEventListener('click', saveLayerStack);
+    var openLayerLibraryFolderBtn = document.getElementById('btnOpenLayerLibraryFolder');
+    if (openLayerLibraryFolderBtn) openLayerLibraryFolderBtn.addEventListener('click', openLayerLibraryFolder);
     document.getElementById('devBtn').addEventListener('click', openDevView);
     document.getElementById('devBack').addEventListener('click', closeDevView);
     document.getElementById('devRefreshDiagnostics').addEventListener('click', refreshDiagnostics);
@@ -1224,6 +1226,11 @@ function bindUI() {
     if (forceTerminalUpdateBtn) forceTerminalUpdateBtn.addEventListener('click', forceTerminalUpdate);
     var openReleasePageBtn = document.getElementById('btnOpenReleasePage');
     if (openReleasePageBtn) openReleasePageBtn.addEventListener('click', openLatestReleasePage);
+    var hideUpdateWeekBtn = document.getElementById('btnHideUpdateWeek');
+    if (hideUpdateWeekBtn) hideUpdateWeekBtn.addEventListener('click', hideUpdatesForWeek);
+    var resetUpdateNoticesBtn = document.getElementById('btnResetUpdateNotices');
+    if (resetUpdateNoticesBtn) resetUpdateNoticesBtn.addEventListener('click', resetUpdateNotices);
+    refreshUpdateHealth();
 
     ['labelFootage', 'labelText', 'labelEffects'].forEach(function (id) {
         document.getElementById(id).addEventListener('change', saveLabelSettings);
@@ -1536,6 +1543,57 @@ function renderPresetsList() {
 
 // ── layer library ──────────────────────────────────────────────────────────────
 
+function refreshUpdateHealth() {
+    var el = document.getElementById('updateHealth');
+    if (!el) return;
+    var snoozed = false;
+    try { snoozed = Number(localStorage.getItem('jx_update_snooze_until') || 0) > Date.now(); } catch(e) {}
+    el.textContent = snoozed ? 'Update notices are hidden for now.' : 'Current version ready. Installer app preferred.';
+}
+
+function hideUpdatesForWeek() {
+    try { localStorage.setItem('jx_update_snooze_until', String(Date.now() + 7 * 24 * 60 * 60 * 1000)); } catch(e) {}
+    var banner = document.getElementById('updateBanner');
+    if (banner) banner.style.display = 'none';
+    refreshUpdateHealth();
+    toast('Update notices hidden for 7 days.');
+}
+
+function resetUpdateNotices() {
+    try {
+        localStorage.removeItem('jx_update_snooze_until');
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf('jx_update_dismissed_') === 0) localStorage.removeItem(key);
+        }
+    } catch(e) {}
+    refreshUpdateHealth();
+    toast('Update notices reset.');
+    if (typeof manualCheckUpdate === 'function') manualCheckUpdate();
+}
+
+function openLayerLibraryFolder() {
+    try {
+        var nr = getNodeRequire();
+        if (!nr) { toast('Node is unavailable.', 'error'); return; }
+        var path = nr('path');
+        var os = nr('os');
+        var fs = nr('fs');
+        var dir = path.join(os.homedir(), 'Library/Application Support/jx Tools/Layer Library');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        nr('child_process').execFile('/usr/bin/open', [dir], function() {});
+        toast('Opened saved stacks folder.', 'success');
+    } catch(e) {
+        toast('Could not open saved stacks folder.', 'error');
+    }
+}
+
+function getNodeRequire() {
+    try { if (typeof cep_node !== 'undefined' && cep_node.require) return cep_node.require.bind(cep_node); } catch(e) {}
+    try { if (typeof require === 'function') return require; } catch(e) {}
+    return null;
+}
+
 function openLayerLibView() {
     closeSettings();
     closeDevView();
@@ -1575,14 +1633,15 @@ function renderLayerLibrary(items) {
     if (!list) return;
     list.innerHTML = '';
     if (!items.length) {
-        list.innerHTML = '<div class="graph-empty">No layer stacks saved in this project yet.</div>';
+        list.innerHTML = '<div class="graph-empty">No saved layer stacks yet.</div>';
         return;
     }
     items.forEach(function (item) {
         var row = document.createElement('div');
         row.className = 'layer-lib-item';
-        row.innerHTML = '<div class="layer-lib-main"><span class="layer-lib-name"></span><span class="layer-lib-meta">' + item.layers + ' layers · ' + item.duration + 's</span></div>';
+        row.innerHTML = '<div class="layer-lib-preview"></div><div class="layer-lib-main"><span class="layer-lib-name"></span><span class="layer-lib-meta">' + item.layers + ' layers · ' + item.duration + 's</span><div class="layer-lib-preview-text"></div></div>';
         row.querySelector('.layer-lib-name').textContent = item.name;
+        renderLayerStackPreview(row, item);
         var apply = document.createElement('button');
         apply.className = 'tool-btn small';
         apply.textContent = 'Add';
@@ -1595,6 +1654,29 @@ function renderLayerLibrary(items) {
         row.appendChild(del);
         list.appendChild(row);
     });
+}
+
+function renderLayerStackPreview(row, item) {
+    var previewBox = row.querySelector('.layer-lib-preview');
+    var previewText = row.querySelector('.layer-lib-preview-text');
+    var preview = item.preview || [];
+    var names = [];
+    for (var i = 0; i < Math.min(preview.length, 4); i++) {
+        var layer = preview[i] || {};
+        var chip = document.createElement('span');
+        chip.className = 'layer-lib-chip ' + String(layer.kind || 'layer').toLowerCase();
+        chip.textContent = (layer.kind || 'L').charAt(0).toUpperCase();
+        chip.title = layer.name || layer.kind || 'Layer';
+        if (previewBox) previewBox.appendChild(chip);
+        if (layer.name) names.push(layer.name);
+    }
+    if (preview.length > 4 && previewBox) {
+        var more = document.createElement('span');
+        more.className = 'layer-lib-chip more';
+        more.textContent = '+' + (preview.length - 4);
+        previewBox.appendChild(more);
+    }
+    if (previewText) previewText.textContent = names.length ? names.join(', ') : 'Saved layer stack';
 }
 
 function applyLayerStack(id) {
@@ -1976,7 +2058,7 @@ function setBeatMode(mode) {
     beatMode = mode;
     var bp = document.getElementById('beatPanel_bpm');
     var fp = document.getElementById('beatPanel_freq');
-    // respect vis-hidden — don't un-hide a panel that the user has hidden via advanced vis
+    // respect vis-hidden - don't un-hide a panel that the user has hidden via advanced vis
     if (bp) bp.style.display = (mode === 'bpm'  && !bp.classList.contains('vis-hidden')) ? '' : 'none';
     if (fp) fp.style.display = (mode === 'freq' && !fp.classList.contains('vis-hidden')) ? '' : 'none';
     document.querySelectorAll('.beat-mode-btn').forEach(function(b) {
@@ -2120,7 +2202,7 @@ function runBPMDetection(buf) {
     }
 
     var resEl = document.getElementById('bpmResult');
-    if (resEl) resEl.textContent = 'Detected: ' + bpm + ' BPM — ' + times.length + ' markers';
+    if (resEl) resEl.textContent = 'Detected: ' + bpm + ' BPM - ' + times.length + ' markers';
 
     var json = JSON.stringify(JSON.stringify(times));
     run('jx_placeBeatsFromTimes(' + json + ')');
@@ -2177,7 +2259,7 @@ function runFreqDetection(buf) {
         for (var i = 0; i < trebleTimes.length; i++) combined.push({ t: trebleTimes[i], label: 'Treble' });
     }
 
-    if (!combined.length) { toast('No beats detected — try lowering the threshold.', 'error'); return; }
+    if (!combined.length) { toast('No beats detected - try lowering the threshold.', 'error'); return; }
     combined.sort(function(a, b) { return a.t - b.t; });
 
     var json = JSON.stringify(JSON.stringify(combined));

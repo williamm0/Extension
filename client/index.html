@@ -54,7 +54,7 @@
     <div class="update-dot"></div>
     <span class="update-text"></span>
     <button class="update-btn" id="btnUpdate">Update</button>
-    <div id="updateProgressBar" class="update-progress-bar"></div>
+    <button class="update-close" id="btnDismissUpdate" title="Hide update notice">×</button>
   </div>
 
   <div id="searchBar" class="search-bar hidden">
@@ -255,7 +255,7 @@
         <div class="ease-canvas-wrap" data-vis-item="easing.graph">
           <canvas id="easeCanvas" class="ease-canvas"></canvas>
           <button class="ease-size-btn" id="btnEaseBig" title="Make graph bigger">Big</button>
-          <button class="ease-draw-btn" id="btnDrawMode" title="Draw mode — sketch a curve freehand">
+          <button class="ease-draw-btn" id="btnDrawMode" title="Draw mode - sketch a curve freehand">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
@@ -312,9 +312,10 @@
   <div class="settings-body">
     <div class="settings-group">
       <div class="settings-group-label">Save Selected Layers</div>
-      <div class="settings-path">Stores selected layers as a reusable stack inside this AE project — no .ffx needed.</div>
+      <div class="settings-path">Stores selected layers permanently, available after closing AE and across new projects.</div>
       <input type="text" id="layerLibName" class="settings-text-input" placeholder="Stack name" autocomplete="off" spellcheck="false">
       <button class="tool-btn small accent" id="btnSaveLayerStack" style="margin-top:7px">Save Selected Layer Stack</button>
+      <button class="tool-btn small" id="btnOpenLayerLibraryFolder" style="margin-top:6px">Open Saved Stacks Folder</button>
     </div>
     <div class="settings-group">
       <div class="settings-group-label">Saved Stacks</div>
@@ -427,7 +428,7 @@
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
         <span class="file-zone-name">Drop .ffx files here</span>
-        <span class="file-zone-hint">or click to browse — multiple ok</span>
+        <span class="file-zone-hint">or click to browse - multiple ok</span>
         <input type="file" id="presetFileInput" accept=".ffx" multiple style="display:none">
       </div>
     </div>
@@ -505,7 +506,7 @@
           <option value="simple">Simple</option>
         </select>
       </div>
-      <div class="settings-path" style="margin-top:4px">Simple hides input fields — buttons still run with their defaults.</div>
+      <div class="settings-path" style="margin-top:4px">Simple hides input fields - buttons still run with their defaults.</div>
     </div>
 
     <div class="settings-group">
@@ -654,10 +655,13 @@
 
     <div class="settings-group">
       <div class="settings-group-label">Updates</div>
+      <div class="settings-path" id="updateHealth">Current version ready.</div>
       <label class="checkbox-label"><input type="checkbox" id="checkPrerelease"> Include pre-releases</label>
       <button class="tool-btn small" id="btnCheckUpdate">Check for Updates</button>
       <button class="tool-btn small" id="btnForceTerminalUpdate">Open Installer App</button>
       <button class="tool-btn small" id="btnOpenReleasePage">Download Installer</button>
+      <button class="tool-btn small" id="btnHideUpdateWeek">Hide Updates for 7 Days</button>
+      <button class="tool-btn small" id="btnResetUpdateNotices">Reset Hidden Notices</button>
     </div>
 
     <div class="settings-footer">
