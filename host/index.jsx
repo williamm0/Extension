@@ -1,4 +1,4 @@
-// jx Tools v1.1.4
+// jx Tools v1.1.5
 
 function ok(msg)   { return JSON.stringify({ success: true,  message: msg }); }
 function fail(msg) { return JSON.stringify({ success: false, message: msg }); }
@@ -18,6 +18,38 @@ function findItemByName(name) {
 
 function plural(n, word) {
     return n + ' ' + word + (n === 1 ? '' : 's');
+}
+
+function vecFromPoint(pt, fallbackZ) {
+    return [pt[0], pt[1], (pt.length > 2) ? pt[2] : (fallbackZ || 0)];
+}
+
+function vecSub(a, b) {
+    return [a[0] - b[0], a[1] - b[1], (a[2] || 0) - (b[2] || 0)];
+}
+
+function vecAdd(a, b) {
+    return [a[0] + b[0], a[1] + b[1], (a[2] || 0) + (b[2] || 0)];
+}
+
+function positionValueForLayer(layer, point) {
+    var pos = layer.position.value;
+    if (pos.length > 2) return [point[0], point[1], point[2] || pos[2] || 0];
+    return [point[0], point[1]];
+}
+
+function setLayerPositionKeepingDimensions(layer, point) {
+    try {
+        layer.position.setValue(positionValueForLayer(layer, point));
+        return true;
+    } catch(e) {}
+    try {
+        if (layer.transform.xPosition) layer.transform.xPosition.setValue(point[0]);
+        if (layer.transform.yPosition) layer.transform.yPosition.setValue(point[1]);
+        if (layer.transform.zPosition && layer.position.value.length > 2) layer.transform.zPosition.setValue(point[2] || 0);
+        return true;
+    } catch(e) {}
+    return false;
 }
 
 function walkProps(propGroup, fn) {
@@ -249,25 +281,32 @@ function jx_centerAnchorAll() {
     if (!comp) return fail('No active composition.');
     var sel = comp.selectedLayers;
     if (!sel || sel.length === 0) return fail('Select at least one layer.');
-    var cx = comp.width  / 2;
-    var cy = comp.height / 2;
+    var compCenter = [comp.width / 2, comp.height / 2, 0];
+    var t = comp.time;
     app.beginUndoGroup('jx: Center Anchor');
     try {
         var count = 0;
         for (var i = 0; i < sel.length; i++) {
             var layer = sel[i];
             try {
-                var oldAnchor = layer.anchorPoint.value;
-                var oldPos    = layer.position.value;
-                var dx = cx - oldPos[0];
-                var dy = cy - oldPos[1];
-                var newAnchor = [oldAnchor[0] + dx, oldAnchor[1] + dy];
-                var newPos    = [cx, cy];
-                if (oldAnchor.length > 2) newAnchor.push(oldAnchor[2] || 0);
-                if (oldPos.length    > 2) newPos.push(oldPos[2]       || 0);
-                layer.anchorPoint.setValue(newAnchor);
-                layer.position.setValue(newPos);
-                count++;
+                if (!layer.anchorPoint || !layer.position || !layer.toWorld || !layer.fromWorld) continue;
+
+                var oldAnchorRaw = layer.anchorPoint.valueAtTime(t, false);
+                var oldPosRaw    = layer.position.valueAtTime(t, false);
+                var oldAnchor    = vecFromPoint(oldAnchorRaw, 0);
+                var posWorld     = vecFromPoint(layer.toWorld(oldAnchor), 0);
+                var newAnchor    = vecFromPoint(layer.fromWorld(compCenter), oldAnchor[2]);
+                var parentDelta;
+
+                if (layer.parent && layer.parent.fromWorld) {
+                    parentDelta = vecSub(vecFromPoint(layer.parent.fromWorld(compCenter), 0),
+                                         vecFromPoint(layer.parent.fromWorld(posWorld), 0));
+                } else {
+                    parentDelta = vecSub(compCenter, posWorld);
+                }
+
+                layer.anchorPoint.setValue(oldAnchorRaw.length > 2 ? newAnchor : [newAnchor[0], newAnchor[1]]);
+                if (setLayerPositionKeepingDimensions(layer, vecAdd(vecFromPoint(oldPosRaw, 0), parentDelta))) count++;
             } catch(e) {}
         }
         app.endUndoGroup();

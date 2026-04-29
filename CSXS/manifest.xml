@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   ExtensionBundleId="com.jx.tools"
-  ExtensionBundleVersion="1.1.4"
+  ExtensionBundleVersion="1.1.5"
   ExtensionBundleName="jx Tools"
   Version="7.0">
 
   <ExtensionList>
-    <Extension Id="com.jx.tools.panel" Version="1.1.4"/>
+    <Extension Id="com.jx.tools.panel" Version="1.1.5"/>
   </ExtensionList>
 
   <ExecutionEnvironment>

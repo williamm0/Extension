@@ -26,6 +26,11 @@
           <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
       </button>
+      <button class="icon-btn" id="searchBtn" title="Search tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="devBtn" title="Developer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
@@ -45,6 +50,11 @@
     <span class="update-text"></span>
     <button class="update-btn" id="btnUpdate">Update</button>
     <div id="updateProgressBar" class="update-progress-bar"></div>
+  </div>
+
+  <div id="searchBar" class="search-bar hidden">
+    <input type="text" id="toolSearch" class="search-input" placeholder="Search tools, even with typos..." autocomplete="off" spellcheck="false">
+    <button class="icon-btn" id="clearSearch" title="Clear search">×</button>
   </div>
 
   <div class="scroll-area">
@@ -248,24 +258,25 @@
           <div class="ease-resize-handle" id="easeResize" title="Drag to resize"></div>
         </div>
         <div id="easeDisplay" class="ease-display" data-vis-item="easing.graph">Out 35%  ·  In 35%</div>
+        <button class="tool-btn small graph-save-btn" id="btnSaveCurve" data-vis-item="easing.apply">Save Current Graph</button>
 
-        <div id="easePresetGrid" class="ease-preset-grid" data-vis-item="easing.presets"></div>
+        <div class="graph-tabs" data-vis-item="easing.presets">
+          <button class="graph-tab active" id="graphTabPremade" data-graph-tab="premade">Premade</button>
+          <button class="graph-tab" id="graphTabCustom" data-graph-tab="custom">Custom</button>
+        </div>
+
+        <div id="easePresetGrid" class="ease-preset-grid graph-page active" data-graph-page="premade" data-vis-item="easing.presets"></div>
 
         <div class="btn-row" data-vis-item="easing.apply">
           <button class="tool-btn flex-1 accent" id="btnApplyEase">Apply to Selected</button>
-          <button class="tool-btn icon-only" id="btnSaveCurve" title="Save curve">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-          </button>
         </div>
 
-        <div id="curveLibrary" class="graph-library" data-vis-item="easing.library" style="display:none">
+        <div id="curveLibrary" class="graph-library graph-page" data-graph-page="custom" data-vis-item="easing.library" style="display:none">
           <div class="graph-library-hd">
-            <span class="graph-library-label">Saved</span>
+            <span class="graph-library-label">Menus</span>
+            <button class="graph-menu-add" id="btnAddGraphMenu" title="New graph menu">+</button>
           </div>
+          <div id="curveMenuTabs" class="graph-menu-tabs"></div>
           <div id="curveList"></div>
         </div>
 
@@ -527,6 +538,22 @@
     </div>
 
     <div class="settings-group">
+      <div class="settings-group-label">Flow Graph Transfer</div>
+      <div class="settings-path">Import graphs from aescripts Flow or JerryFlow if installed.</div>
+      <button class="tool-btn small" id="btnTransferFlowGraphs">Transfer Graphs from Flow</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Graph Library</div>
+      <div class="input-row">
+        <label>Icon size</label>
+        <input type="range" id="graphIconSize" class="range-input" min="48" max="140" value="74">
+        <span class="range-val" id="graphIconSizeVal">74</span>
+      </div>
+      <button class="tool-btn small" id="btnSettingsAddGraphMenu">New Graph Menu</button>
+    </div>
+
+    <div class="settings-group">
       <div class="settings-group-label">Panel Sections</div>
       <div class="section-vis-list">
         <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="layers"     checked> Layers</label>
@@ -647,7 +674,73 @@
     <div class="settings-group">
       <div class="settings-group-label">Storage (jx_*)</div>
       <div class="dev-dump" id="devDump"></div>
-      <button class="tool-btn small" id="devClearStorage" style="margin-top:8px">Clear All jx_* Keys</button>
+      <div class="dev-tool-grid" style="margin-top:8px">
+        <button class="tool-btn small" id="devRefreshDiagnostics">Refresh Diagnostics</button>
+        <button class="tool-btn small" id="devCopyDiagnostics">Copy Diagnostics</button>
+        <button class="tool-btn small" id="devDownloadDiagnostics">Export Diagnostics</button>
+        <button class="tool-btn small" id="devOpenExtensionNormal">Reveal Extension Folder</button>
+        <button class="tool-btn small" id="devClearActionLog">Clear Action Log</button>
+        <button class="tool-btn small" id="devClearStorage">Clear All jx_* Keys</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Diagnostics</div>
+      <div class="dev-dump" id="devDiagnostics"></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Normal Dev Utilities</div>
+      <div class="dev-tool-grid">
+        <button class="tool-btn small" id="devCopyVersion">Copy Version Info</button>
+        <button class="tool-btn small" id="devCopyUpdateInfo">Copy Update Info</button>
+        <button class="tool-btn small" id="devExportActions">Export Action Log</button>
+        <button class="tool-btn small" id="devExportStorageKeys">Export Storage Keys</button>
+        <button class="tool-btn small" id="devCountTools">Count Visible Tools</button>
+        <button class="tool-btn small" id="devPingHost">Ping JSX Host</button>
+        <button class="tool-btn small" id="devCopyGraphData">Copy Graph Data</button>
+        <button class="tool-btn small" id="devCopySectionData">Copy Section Data</button>
+        <button class="tool-btn small" id="devToggleAllSections">Open All Sections</button>
+        <button class="tool-btn small" id="devCollapseAllSections">Close All Sections</button>
+        <button class="tool-btn small" id="devMeasurePanel">Measure Panel</button>
+        <button class="tool-btn small" id="devCopyLastError">Copy Last Error</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Owner Unlock</div>
+      <div class="settings-path" id="ownerUnlockStatus">Locked</div>
+      <input type="password" id="ownerPasswordInput" class="settings-text-input" placeholder="Owner password" autocomplete="off" spellcheck="false">
+      <div class="btn-row" style="margin-top:7px">
+        <button class="tool-btn small" id="ownerUnlockBtn">Unlock</button>
+        <button class="tool-btn small" id="ownerLockBtn">Lock</button>
+      </div>
+    </div>
+
+    <div class="settings-group owner-only locked">
+      <div class="settings-group-label">Owner Tools</div>
+      <div class="dev-tool-grid">
+        <button class="tool-btn small" id="devExportState">Export Full State</button>
+        <button class="tool-btn small" id="devCopyState">Copy Full State</button>
+        <button class="tool-btn small" id="devOpenExtension">Reveal Extension Folder</button>
+        <button class="tool-btn small" id="devOpenPasswordFile">Open Password File</button>
+        <button class="tool-btn small" id="devForceUpdateCheck">Force Update Check</button>
+        <button class="tool-btn small" id="devRunSmokeTest">Run UI Smoke Test</button>
+        <button class="tool-btn small" id="devDeepSmokeTest">Deep Smoke Test</button>
+        <button class="tool-btn small" id="devBackupSettings">Backup Settings</button>
+        <button class="tool-btn small" id="devRestoreSettings">Restore Settings</button>
+        <button class="tool-btn small" id="devExportHtmlDump">Export HTML Dump</button>
+        <button class="tool-btn small" id="devExportCssVars">Export CSS Vars</button>
+        <button class="tool-btn small" id="devExportManifest">Export Manifest Copy</button>
+        <button class="tool-btn small" id="devOpenBackupFile">Open Settings Backup</button>
+        <button class="tool-btn small" id="devValidateStorage">Validate Storage JSON</button>
+        <button class="tool-btn small" id="devPruneBadStorage">Prune Bad Storage JSON</button>
+        <button class="tool-btn small" id="devResetGraphs">Reset Graph Library</button>
+        <button class="tool-btn small" id="devResetOnboarding">Reset Onboarding</button>
+        <button class="tool-btn small" id="devResetLayout">Reset Panel Layout</button>
+        <button class="tool-btn small danger" id="devFactoryReset">Factory Reset jx Storage</button>
+        <button class="tool-btn small danger" id="devClearOwner">Clear Owner Unlock</button>
+      </div>
     </div>
 
   </div>

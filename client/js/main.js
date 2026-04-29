@@ -2,6 +2,8 @@ var cs = new CSInterface();
 
 var loadedPresetPath = localStorage.getItem('jx_preset') || null;
 var quickPresets     = JSON.parse(localStorage.getItem('jx_quick_presets') || '[]');
+var SECTION_KEYS      = ['layers', 'animation', 'fx', 'colour', 'keyframes', 'easing'];
+var SECTION_LABELS    = { layers: 'Layers', animation: 'Animation', fx: 'FX', colour: 'Colour', keyframes: 'Keyframes', easing: 'Easing' };
 
 // ── theme ──────────────────────────────────────────────────────────────────────
 
@@ -117,14 +119,18 @@ function applyInterfaceMode(mode) {
 // ── greeting ───────────────────────────────────────────────────────────────────
 
 var GREETINGS_MORNING = [
-    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', "you're up early",
-    'locking in early is crazy 😭', 'mornin 💋', 'keyframes for breakfast?? 😭',
-    'who are you editing this early?', 'we are so back', 'remember a watermark before rendering'
+    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', "you're actually up early",
+    'locking in before 10 is crazy 😭', 'mornin 💋', 'keyframes for breakfast?? 😭',
+    'who are you editing this early?', 'we are so back', 'coffee first, keyframes second',
+    'pre-10am timeline warrior', 'early render energy', 'breakfast and bezier curves??'
 ];
 var GREETINGS_AFTERNOON = [
     'keep cooking', 'no because this is so good', 'loving it', 'serving keyframes',
     'this is giving productive', 'timeline looking almost expensive as you ',
-    'W', 'the comp is comping', 'lowkey locked in 🎧'
+    'W', 'the comp is comping', 'lowkey locked in 🎧', 'midday edit mode online',
+    '10am counts as business hours now', 'render queue looking respectful',
+    'timeline is behaving today maybe', 'clean curves clean conscience',
+    'this panel believes in you unfortunately', 'post-morning productivity arc'
 ];
 var GREETINGS_EVENING = [
     'night shift editor arc', 'still cooking is wild 😭', 'this edit better go platinum',
@@ -140,7 +146,7 @@ var GREETINGS_NIGHT = [
 function pickGreeting() {
     var h = new Date().getHours();
     var pool = h < 5  ? GREETINGS_NIGHT
-             : h < 12 ? GREETINGS_MORNING
+             : h < 10 ? GREETINGS_MORNING
              : h < 17 ? GREETINGS_AFTERNOON
              : h < 22 ? GREETINGS_EVENING
              :          GREETINGS_NIGHT;
@@ -296,6 +302,10 @@ var actionsRun   = 0;
 var actionLog    = [];
 var ACTION_LOG_MAX = 30;
 var grassNudgeIndex = -1;
+var OWNER_AUTH_KEY = 'jx_owner_unlocked';
+var OWNER_SALT = 'fcd355c89361c9ad21284f00e5a24121';
+var OWNER_HASH = 'c0d9dda440d0a80adb0f095d0aa9facff47c6d5d120ecddb7a82eccda34d6f3c';
+var lastDevError = '';
 var GRASS_NUDGES = [
     'You\'ve been editing for over an hour — definitely touch grass soon 🌿',
     'Tiny human reminder: stretch, blink, drink water, maybe touch grass 😊',
@@ -372,6 +382,478 @@ function renderDevView() {
         lines.sort();
         dump.textContent = lines.length ? lines.join('\n') : '(empty)';
     }
+    var diag = document.getElementById('devDiagnostics');
+    if (diag) diag.textContent = formatDiagnostics(collectDiagnostics(false));
+    renderOwnerUnlock();
+}
+
+function collectDiagnostics(includeStorage) {
+    var extPath = '';
+    try { extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch(e) {}
+    var storageKeys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) storageKeys.push(k);
+    }
+    storageKeys.sort();
+    var sections = [];
+    document.querySelectorAll('section[data-section]').forEach(function (section) {
+        sections.push(section.dataset.section + ':' + (section.style.display === 'none' ? 'hidden' : 'shown') + (section.classList.contains('collapsed') ? ':closed' : ':open'));
+    });
+    var diag = {
+        version: CURRENT_VERSION,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        node: typeof require === 'function' ? 'available' : 'missing',
+        extensionPath: extPath,
+        storageKeyCount: storageKeys.length,
+        storageKeys: storageKeys,
+        currentTheme: localStorage.getItem('jx_theme') || 'amber',
+        graphCount: safeArrayCount(localStorage.getItem('jx_curves')),
+        graphMenus: safeArrayCount(localStorage.getItem('jx_graph_menus')),
+        quickPresets: safeArrayCount(localStorage.getItem('jx_quick_presets')),
+        sections: sections,
+        actionsRun: actionsRun,
+        ownerUnlocked: isOwnerUnlocked(),
+        panel: measurePanelData(),
+        lastError: lastDevError || ''
+    };
+    if (includeStorage) diag.storage = collectJxStorage();
+    return diag;
+}
+
+function measurePanelData() {
+    var app = document.getElementById('app');
+    var scroll = document.querySelector('.scroll-area');
+    return {
+        window: window.innerWidth + 'x' + window.innerHeight,
+        app: app ? Math.round(app.getBoundingClientRect().width) + 'x' + Math.round(app.getBoundingClientRect().height) : 'missing',
+        scrollHeight: scroll ? scroll.scrollHeight : 0,
+        scrollTop: scroll ? scroll.scrollTop : 0
+    };
+}
+
+function safeArrayCount(json) {
+    try { var v = JSON.parse(json || '[]'); return Array.isArray(v) ? v.length : 0; } catch(e) { return 0; }
+}
+
+function collectJxStorage() {
+    var storage = {};
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) storage[k] = localStorage.getItem(k);
+    }
+    return storage;
+}
+
+function formatDiagnostics(diag) {
+    return [
+        'version: ' + diag.version,
+        'platform: ' + diag.platform,
+        'node: ' + diag.node,
+        'storage keys: ' + diag.storageKeyCount,
+        'graphs: ' + diag.graphCount + ' / menus: ' + diag.graphMenus,
+        'quick presets: ' + diag.quickPresets,
+        'theme: ' + diag.currentTheme,
+        'actions run: ' + diag.actionsRun,
+        'extension: ' + diag.extensionPath,
+        'sections: ' + diag.sections.join(', ')
+    ].join('\n');
+}
+
+function isOwnerUnlocked() {
+    return sessionStorage.getItem(OWNER_AUTH_KEY) === '1';
+}
+
+function renderOwnerUnlock() {
+    var unlocked = isOwnerUnlocked();
+    var status = document.getElementById('ownerUnlockStatus');
+    if (status) status.textContent = unlocked ? 'Unlocked for this panel session' : 'Locked';
+    document.querySelectorAll('.owner-only').forEach(function (el) {
+        el.classList.toggle('locked', !unlocked);
+    });
+}
+
+function ownerDigest(password, callback) {
+    password = String(password || '');
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+        var enc = new TextEncoder();
+        window.crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']).then(function (key) {
+            return window.crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode(OWNER_SALT), iterations: 100000, hash: 'SHA-256' }, key, 256);
+        }).then(function (bits) {
+            callback(bytesToHex(new Uint8Array(bits)));
+        }).catch(function () { callback(null); });
+        return;
+    }
+    try {
+        if (typeof require === 'function') {
+            var crypto = require('crypto');
+            callback(crypto.pbkdf2Sync(password, OWNER_SALT, 100000, 32, 'sha256').toString('hex'));
+            return;
+        }
+    } catch(e) {}
+    callback(null);
+}
+
+function bytesToHex(bytes) {
+    var out = '';
+    for (var i = 0; i < bytes.length; i++) out += ('0' + bytes[i].toString(16)).slice(-2);
+    return out;
+}
+
+function unlockOwnerTools() {
+    var input = document.getElementById('ownerPasswordInput');
+    var pass = input ? input.value : '';
+    ownerDigest(pass, function (digest) {
+        if (digest === OWNER_HASH) {
+            sessionStorage.setItem(OWNER_AUTH_KEY, '1');
+            if (input) input.value = '';
+            renderOwnerUnlock();
+            toast('Owner tools unlocked.', 'success');
+        } else {
+            toast('Owner password rejected.', 'error');
+        }
+    });
+}
+
+function lockOwnerTools() {
+    sessionStorage.removeItem(OWNER_AUTH_KEY);
+    renderOwnerUnlock();
+    toast('Owner tools locked.');
+}
+
+function requireOwner() {
+    if (isOwnerUnlocked()) return true;
+    toast('Owner tools are locked.', 'error');
+    return false;
+}
+
+function collectDevState() {
+    var state = {
+        version: CURRENT_VERSION,
+        exportedAt: new Date().toISOString(),
+        extensionPath: cs.getSystemPath(SystemPath.EXTENSION),
+        diagnostics: collectDiagnostics(true),
+        actionsRun: actionsRun,
+        actionLog: actionLog,
+        storage: collectJxStorage()
+    };
+    return state;
+}
+
+function writeDesktopFile(name, content, done) {
+    var path = cs.getSystemPath(SystemPath.DESKTOP) + '/' + name;
+    var safePath = path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var safeContent = String(content || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_writeFile('" + safePath + "','" + safeContent + "')", function (result) {
+        var res = parseResult(result);
+        if (done) done(res && res.success, path);
+    });
+}
+
+function exportDevState() {
+    if (!requireOwner()) return;
+    var json = JSON.stringify(collectDevState(), null, 2);
+    writeDesktopFile('jx-tools-state-' + Date.now() + '.json', json, function (ok) {
+        toast(ok ? 'Full state exported to Desktop.' : 'Export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function copyDevState() {
+    if (!requireOwner()) return;
+    var json = JSON.stringify(collectDevState(), null, 2);
+    var ok = false;
+    try {
+        var ta = document.createElement('textarea');
+        ta.value = json;
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch(e) {}
+    toast(ok ? 'State copied to clipboard.' : 'Clipboard copy failed.', ok ? 'success' : 'error');
+}
+
+function revealExtensionFolder() {
+    var path = cs.getSystemPath(SystemPath.EXTENSION);
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [path], { detached: true, stdio: 'ignore' }).unref();
+        toast('Extension folder opened.', 'success');
+    } catch(e) { toast('Could not open folder.', 'error'); }
+}
+
+function resetPanelLayout() {
+    if (!requireOwner()) return;
+    ['jx_sections', 'jx_section_collapsed', 'jx_section_order', 'jx_items', 'jx_favorites', 'jx_favorite_mode'].forEach(function (k) {
+        localStorage.removeItem(k);
+    });
+    toast('Panel layout reset. Reload the panel.', 'success');
+}
+
+function clearOwnerUnlock() {
+    if (!requireOwner()) return;
+    lockOwnerTools();
+}
+
+function refreshDiagnostics() {
+    renderDevView();
+    toast('Diagnostics refreshed.', 'success');
+}
+
+function copyDiagnostics() {
+    copyText(JSON.stringify(collectDiagnostics(false), null, 2), 'Diagnostics copied.', 'Clipboard copy failed.');
+}
+
+function downloadDiagnostics() {
+    writeDesktopFile('jx-tools-diagnostics-' + Date.now() + '.json', JSON.stringify(collectDiagnostics(false), null, 2), function (ok) {
+        toast(ok ? 'Diagnostics exported to Desktop.' : 'Diagnostics export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function clearActionLog() {
+    actionLog = [];
+    actionsRun = 0;
+    renderDevView();
+    toast('Action log cleared.');
+}
+
+function copyText(text, okMsg, failMsg) {
+    var ok = false;
+    try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch(e) {}
+    toast(ok ? okMsg : failMsg, ok ? 'success' : 'error');
+}
+
+function openPasswordFile() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-owner-password.txt'], { detached: true, stdio: 'ignore' }).unref();
+        toast('Password file opened.', 'success');
+    } catch(e) { toast('Could not open password file.', 'error'); }
+}
+
+function forceUpdateCheck() {
+    if (!requireOwner()) return;
+    try {
+        localStorage.setItem('jx_prerelease', '1');
+        var cb = document.getElementById('checkPrerelease');
+        if (cb) cb.checked = true;
+        manualCheckUpdate();
+        toast('Forced update check started.', 'success');
+    } catch(e) { toast('Could not start update check.', 'error'); }
+}
+
+function runSmokeTest() {
+    if (!requireOwner()) return;
+    var failures = [];
+    ['btnCenterAnchor', 'btnApplyEase', 'btnSaveCurve', 'settingsView', 'devView', 'curveLibrary', 'updateBanner'].forEach(function (id) {
+        if (!document.getElementById(id)) failures.push(id);
+    });
+    if (typeof graphEditor === 'undefined') failures.push('graphEditor');
+    if (typeof CURRENT_VERSION === 'undefined') failures.push('CURRENT_VERSION');
+    toast(failures.length ? 'Smoke test failed: ' + failures.join(', ') : 'Smoke test passed.', failures.length ? 'error' : 'success');
+}
+
+function backupSettings() {
+    if (!requireOwner()) return;
+    writeDesktopFile('jx-tools-settings-backup.json', JSON.stringify({ exportedAt: new Date().toISOString(), storage: collectJxStorage() }, null, 2), function (ok) {
+        toast(ok ? 'Settings backup saved to Desktop.' : 'Settings backup failed.', ok ? 'success' : 'error');
+    });
+}
+
+function restoreSettings() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require !== 'function') { toast('Node unavailable for restore.', 'error'); return; }
+        var fs = require('fs');
+        var path = cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-settings-backup.json';
+        var data = JSON.parse(fs.readFileSync(path, 'utf8'));
+        if (!data || !data.storage) { toast('Backup file is invalid.', 'error'); return; }
+        Object.keys(data.storage).forEach(function (k) { if (k.indexOf('jx_') === 0) localStorage.setItem(k, data.storage[k]); });
+        renderDevView();
+        toast('Settings restored. Reload the panel.', 'success');
+    } catch(e) { toast('No settings backup found on Desktop.', 'error'); }
+}
+
+function factoryResetStorage() {
+    if (!requireOwner()) return;
+    if (!confirm('Factory reset every jx_* setting?')) return;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    renderDevView();
+    toast('Factory reset complete. Reload the panel.', 'success');
+}
+
+function copyVersionInfo() {
+    copyText(JSON.stringify({ version: CURRENT_VERSION, userAgent: navigator.userAgent, platform: navigator.platform }, null, 2), 'Version info copied.', 'Copy failed.');
+}
+
+function copyUpdateInfo() {
+    var info = typeof _updateInfo !== 'undefined' && _updateInfo ? _updateInfo : { updateInfo: 'none loaded' };
+    copyText(JSON.stringify(info, null, 2), 'Update info copied.', 'Copy failed.');
+}
+
+function exportActions() {
+    writeDesktopFile('jx-tools-action-log-' + Date.now() + '.json', JSON.stringify(actionLog, null, 2), function (ok) {
+        toast(ok ? 'Action log exported.' : 'Action export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportStorageKeys() {
+    writeDesktopFile('jx-tools-storage-keys-' + Date.now() + '.json', JSON.stringify(Object.keys(collectJxStorage()).sort(), null, 2), function (ok) {
+        toast(ok ? 'Storage keys exported.' : 'Storage key export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function countVisibleTools() {
+    var all = document.querySelectorAll('[data-vis-item].tool-btn').length;
+    var visible = 0;
+    document.querySelectorAll('[data-vis-item].tool-btn').forEach(function (el) {
+        if (el.offsetParent !== null) visible++;
+    });
+    toast(visible + ' visible tool buttons of ' + all + '.');
+}
+
+function pingHost() {
+    cs.evalScript('ok("Host bridge alive.")', function (result) {
+        var res = parseResult(result);
+        toast(res && res.success ? res.message : 'Host bridge failed.', res && res.success ? 'success' : 'error');
+    });
+}
+
+function copyGraphData() {
+    var data = {
+        curves: JSON.parse(localStorage.getItem('jx_curves') || '[]'),
+        menus: JSON.parse(localStorage.getItem('jx_graph_menus') || '[]'),
+        activeMenu: localStorage.getItem('jx_graph_menu_active') || 'main'
+    };
+    copyText(JSON.stringify(data, null, 2), 'Graph data copied.', 'Graph copy failed.');
+}
+
+function copySectionData() {
+    var data = { visibility: {}, collapsed: {}, order: [] };
+    try { data.visibility = JSON.parse(localStorage.getItem('jx_sections') || '{}'); } catch(e) {}
+    try { data.collapsed = JSON.parse(localStorage.getItem('jx_section_collapsed') || '{}'); } catch(e) {}
+    try { data.order = JSON.parse(localStorage.getItem('jx_section_order') || '[]'); } catch(e) {}
+    copyText(JSON.stringify(data, null, 2), 'Section data copied.', 'Section copy failed.');
+}
+
+function setAllSectionsCollapsed(collapsed) {
+    document.querySelectorAll('section[data-section]').forEach(function (section) { section.classList.toggle('collapsed', collapsed); });
+    saveSectionCollapse();
+    toast(collapsed ? 'All sections closed.' : 'All sections opened.');
+}
+
+function measurePanel() {
+    copyText(JSON.stringify(measurePanelData(), null, 2), 'Panel measurement copied.', 'Measurement copy failed.');
+}
+
+function copyLastError() {
+    copyText(lastDevError || 'No errors recorded.', 'Last error copied.', 'Copy failed.');
+}
+
+function deepSmokeTest() {
+    if (!requireOwner()) return;
+    var failures = [];
+    ['jx_curves', 'jx_graph_menus', 'jx_sections', 'jx_section_order'].forEach(function (k) {
+        var v = localStorage.getItem(k);
+        if (v) { try { JSON.parse(v); } catch(e) { failures.push(k + ' invalid JSON'); } }
+    });
+    ['client/js/main.js', 'client/js/graph-editor.js', 'client/js/updater.js', 'host/index.jsx', 'CSXS/manifest.xml'].forEach(function (rel) {
+        if (!fileExists(rel)) failures.push(rel + ' missing');
+    });
+    toast(failures.length ? 'Deep smoke failed: ' + failures.slice(0, 3).join(', ') : 'Deep smoke passed.', failures.length ? 'error' : 'success');
+}
+
+function fileExists(rel) {
+    try {
+        if (typeof require !== 'function') return true;
+        var fs = require('fs'), path = require('path');
+        return fs.existsSync(path.join(cs.getSystemPath(SystemPath.EXTENSION), rel));
+    } catch(e) { return false; }
+}
+
+function exportHtmlDump() {
+    if (!requireOwner()) return;
+    writeDesktopFile('jx-tools-dom-dump-' + Date.now() + '.html', document.documentElement.outerHTML, function (ok) {
+        toast(ok ? 'HTML dump exported.' : 'HTML dump failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportCssVars() {
+    if (!requireOwner()) return;
+    var csStyle = getComputedStyle(document.documentElement);
+    var vars = {};
+    ['--bg','--surface','--surface-2','--surface-3','--border','--accent','--accent-soft','--accent-mid','--text','--graph-card-size','--r','--ui-density'].forEach(function (k) {
+        vars[k] = csStyle.getPropertyValue(k).trim();
+    });
+    writeDesktopFile('jx-tools-css-vars-' + Date.now() + '.json', JSON.stringify(vars, null, 2), function (ok) {
+        toast(ok ? 'CSS vars exported.' : 'CSS export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportManifestCopy() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require !== 'function') { toast('Node unavailable.', 'error'); return; }
+        var fs = require('fs'), path = require('path');
+        var manifest = fs.readFileSync(path.join(cs.getSystemPath(SystemPath.EXTENSION), 'CSXS/manifest.xml'), 'utf8');
+        writeDesktopFile('jx-tools-manifest-' + Date.now() + '.xml', manifest, function (ok) { toast(ok ? 'Manifest exported.' : 'Manifest export failed.', ok ? 'success' : 'error'); });
+    } catch(e) { toast('Manifest export failed.', 'error'); }
+}
+
+function openSettingsBackup() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-settings-backup.json'], { detached: true, stdio: 'ignore' }).unref();
+        toast('Backup file opened.', 'success');
+    } catch(e) { toast('Could not open backup file.', 'error'); }
+}
+
+function validateStorageJson() {
+    if (!requireOwner()) return;
+    var bad = getBadStorageKeys();
+    toast(bad.length ? 'Bad JSON: ' + bad.join(', ') : 'Storage JSON is valid.', bad.length ? 'error' : 'success');
+}
+
+function getBadStorageKeys() {
+    var bad = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i), v = localStorage.getItem(k);
+        if (k && k.indexOf('jx_') === 0 && v && /^[\[{]/.test(v)) { try { JSON.parse(v); } catch(e) { bad.push(k); } }
+    }
+    return bad;
+}
+
+function pruneBadStorageJson() {
+    if (!requireOwner()) return;
+    var bad = getBadStorageKeys();
+    bad.forEach(function (k) { localStorage.removeItem(k); });
+    renderDevView();
+    toast('Pruned ' + bad.length + ' bad JSON keys.', bad.length ? 'success' : '');
+}
+
+function resetGraphs() {
+    if (!requireOwner()) return;
+    if (!confirm('Delete all saved graphs and graph menus?')) return;
+    ['jx_curves', 'jx_graph_menus', 'jx_graph_menu_active', 'jx_graph_icon_size'].forEach(function (k) { localStorage.removeItem(k); });
+    toast('Graph library reset. Reload the panel.', 'success');
+}
+
+function resetOnboarding() {
+    if (!requireOwner()) return;
+    localStorage.removeItem('jx_onboarded');
+    toast('Onboarding reset. Reload the panel.', 'success');
 }
 
 // ── easing resize ──────────────────────────────────────────────────────────────
@@ -624,6 +1106,8 @@ window.addEventListener('DOMContentLoaded', function () {
     bindUI();
     initBeatMode();
     initSectionVisibility();
+    initSectionControls();
+    initToolSearch();
     initItemVisibility();
     initFavorites();
     graphEditor.init(document.getElementById('easeCanvas'));
@@ -640,12 +1124,56 @@ window.addEventListener('DOMContentLoaded', function () {
 
 function bindUI() {
     document.getElementById('favoritesBtn').addEventListener('click', toggleFavoriteMode);
+    document.getElementById('searchBtn').addEventListener('click', toggleToolSearch);
+    document.getElementById('clearSearch').addEventListener('click', clearToolSearch);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('settingsBack').addEventListener('click', closeSettings);
     document.getElementById('presetsBtn').addEventListener('click', openPresetsView);
     document.getElementById('presetsBack').addEventListener('click', closePresetsView);
     document.getElementById('devBtn').addEventListener('click', openDevView);
     document.getElementById('devBack').addEventListener('click', closeDevView);
+    document.getElementById('devRefreshDiagnostics').addEventListener('click', refreshDiagnostics);
+    document.getElementById('devCopyDiagnostics').addEventListener('click', copyDiagnostics);
+    document.getElementById('devDownloadDiagnostics').addEventListener('click', downloadDiagnostics);
+    document.getElementById('devOpenExtensionNormal').addEventListener('click', revealExtensionFolder);
+    document.getElementById('devClearActionLog').addEventListener('click', clearActionLog);
+    document.getElementById('devCopyVersion').addEventListener('click', copyVersionInfo);
+    document.getElementById('devCopyUpdateInfo').addEventListener('click', copyUpdateInfo);
+    document.getElementById('devExportActions').addEventListener('click', exportActions);
+    document.getElementById('devExportStorageKeys').addEventListener('click', exportStorageKeys);
+    document.getElementById('devCountTools').addEventListener('click', countVisibleTools);
+    document.getElementById('devPingHost').addEventListener('click', pingHost);
+    document.getElementById('devCopyGraphData').addEventListener('click', copyGraphData);
+    document.getElementById('devCopySectionData').addEventListener('click', copySectionData);
+    document.getElementById('devToggleAllSections').addEventListener('click', function () { setAllSectionsCollapsed(false); });
+    document.getElementById('devCollapseAllSections').addEventListener('click', function () { setAllSectionsCollapsed(true); });
+    document.getElementById('devMeasurePanel').addEventListener('click', measurePanel);
+    document.getElementById('devCopyLastError').addEventListener('click', copyLastError);
+    document.getElementById('ownerUnlockBtn').addEventListener('click', unlockOwnerTools);
+    document.getElementById('ownerLockBtn').addEventListener('click', lockOwnerTools);
+    document.getElementById('ownerPasswordInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') unlockOwnerTools();
+    });
+    document.getElementById('devExportState').addEventListener('click', exportDevState);
+    document.getElementById('devCopyState').addEventListener('click', copyDevState);
+    document.getElementById('devOpenExtension').addEventListener('click', revealExtensionFolder);
+    document.getElementById('devOpenPasswordFile').addEventListener('click', openPasswordFile);
+    document.getElementById('devForceUpdateCheck').addEventListener('click', forceUpdateCheck);
+    document.getElementById('devRunSmokeTest').addEventListener('click', runSmokeTest);
+    document.getElementById('devDeepSmokeTest').addEventListener('click', deepSmokeTest);
+    document.getElementById('devBackupSettings').addEventListener('click', backupSettings);
+    document.getElementById('devRestoreSettings').addEventListener('click', restoreSettings);
+    document.getElementById('devExportHtmlDump').addEventListener('click', exportHtmlDump);
+    document.getElementById('devExportCssVars').addEventListener('click', exportCssVars);
+    document.getElementById('devExportManifest').addEventListener('click', exportManifestCopy);
+    document.getElementById('devOpenBackupFile').addEventListener('click', openSettingsBackup);
+    document.getElementById('devValidateStorage').addEventListener('click', validateStorageJson);
+    document.getElementById('devPruneBadStorage').addEventListener('click', pruneBadStorageJson);
+    document.getElementById('devResetGraphs').addEventListener('click', resetGraphs);
+    document.getElementById('devResetOnboarding').addEventListener('click', resetOnboarding);
+    document.getElementById('devResetLayout').addEventListener('click', resetPanelLayout);
+    document.getElementById('devFactoryReset').addEventListener('click', factoryResetStorage);
+    document.getElementById('devClearOwner').addEventListener('click', clearOwnerUnlock);
 
     // theme swatches
     document.querySelectorAll('.theme-swatch').forEach(function (btn) {
@@ -805,6 +1333,10 @@ function bindUI() {
         run("jx_applyEase('" + json + "')");
     });
     document.getElementById('btnSaveCurve').addEventListener('click', openSaveModal);
+    document.getElementById('btnAddGraphMenu').addEventListener('click', addGraphMenuPrompt);
+    document.querySelectorAll('[data-graph-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () { graphEditor.setGraphPage(btn.dataset.graphTab); });
+    });
 
     // quick presets drop zone
     var pdz = document.getElementById('presetDropZone');
@@ -838,6 +1370,11 @@ function bindUI() {
     });
 
     document.getElementById('clearFavorites').addEventListener('click', clearFavorites);
+    document.getElementById('btnTransferFlowGraphs').addEventListener('click', transferFlowGraphs);
+    document.getElementById('btnSettingsAddGraphMenu').addEventListener('click', addGraphMenuPrompt);
+    document.getElementById('graphIconSize').addEventListener('input', function () {
+        graphEditor.setCustomIconSize(this.value);
+    });
     document.getElementById('rerunOnboarding').addEventListener('click', function () {
         localStorage.removeItem('jx_onboarded');
         closeSettings();
@@ -1007,6 +1544,86 @@ function confirmSave() {
     toast('Saved.');
 }
 
+function addGraphMenuPrompt() {
+    var name = prompt('Name this graph menu:', 'New menu');
+    if (name === null) return;
+    if (graphEditor.createMenu(name)) toast('Graph menu created.', 'success');
+    else toast('Menu needs a name.', 'error');
+}
+
+
+function transferFlowGraphs() {
+    var page = prompt('Which Flow page/library should I clone?', localStorage.getItem('jx_flow_page') || 'jx.flow');
+    if (page === null) return;
+    page = (page || '').replace(/^\s+|\s+$/g, '') || 'jx.flow';
+    localStorage.setItem('jx_flow_page', page);
+    var curves = readFlowCurves(page);
+    if (!curves.found) {
+        toast('Flow was not found, or no matching graph page exists.', 'error');
+        return;
+    }
+    if (!curves.items.length) {
+        toast('Found Flow, but that page has no graphs to import.', 'error');
+        return;
+    }
+    var added = graphEditor.addCurves(curves.items);
+    toast('Imported ' + added + ' Flow ' + (added === 1 ? 'graph' : 'graphs') + '.', added ? 'success' : 'error');
+}
+
+function readFlowCurves(page) {
+    var out = { found: false, items: [] };
+    try {
+        if (typeof require !== 'function') return out;
+        var fs = require('fs'), path = require('path'), os = require('os');
+        var home = os.homedir();
+        var pageNames = uniqueNames([page, page + '.flow', page + '.jf', page.replace(/\.(flow|jf)$/i, '') + '.flow', page.replace(/\.(flow|jf)$/i, '') + '.jf']);
+        var dirs = [
+            path.join(home, 'Library/Application Support/Aescripts/flow/libraries'),
+            path.join(home, 'Documents/Video/Projects/JerryFlow'),
+            path.join(home, 'Documents/JerryFlow')
+        ];
+        for (var d = 0; d < dirs.length; d++) {
+            for (var n = 0; n < pageNames.length; n++) {
+                var file = path.join(dirs[d], pageNames[n]);
+                if (fs.existsSync(file)) {
+                    out.found = true;
+                    out.items = out.items.concat(parseFlowFile(fs.readFileSync(file, 'utf8'), path.basename(file)));
+                }
+            }
+        }
+        if (!out.found) {
+            var cepDirs = ['/Library/Application Support/Adobe/CEP/extensions/flow-v1.5.2', '/Library/Application Support/Adobe/CEP/extensions/JerryFlow V2'];
+            for (var c = 0; c < cepDirs.length; c++) if (fs.existsSync(cepDirs[c])) out.found = true;
+        }
+    } catch(e) {}
+    return out;
+}
+
+function uniqueNames(names) {
+    var seen = {}, out = [];
+    names.forEach(function(name) { if (name && !seen[name]) { seen[name] = true; out.push(name); } });
+    return out;
+}
+
+function parseFlowFile(text, fallbackName) {
+    var data, out = [];
+    try { data = JSON.parse(text); } catch(e) { return out; }
+    if (!Array.isArray(data)) return out;
+    data.forEach(function(item, i) {
+        var c = null;
+        if (item.value && item.value.length >= 4) c = { name: item.name, vals: item.value };
+        if (item.x1 !== undefined && item.y1 !== undefined && item.x2 !== undefined && item.y2 !== undefined) c = { name: item.name, vals: [item.x1, item.y1, item.x2, item.y2] };
+        if (!c) return;
+        if (c.name === '' && item.active === false) return;
+        out.push({
+            name: c.name || (fallbackName + ' ' + (i + 1)),
+            h1: { x: parseFloat(c.vals[0]), y: parseFloat(c.vals[1]) },
+            h2: { x: parseFloat(c.vals[2]), y: parseFloat(c.vals[3]) }
+        });
+    });
+    return out;
+}
+
 // ── settings ───────────────────────────────────────────────────────────────────
 
 function openSettings() {
@@ -1031,9 +1648,7 @@ function renderSettingsPreset() {
     }
 }
 
-// ── section visibility ─────────────────────────────────────────────────────────
-
-var SECTIONS = ['layers', 'animation', 'fx', 'colour', 'keyframes', 'easing'];
+// ── section visibility / layout ────────────────────────────────────────────────
 
 function initSectionVisibility() {
     var saved = {};
@@ -1051,6 +1666,62 @@ function initSectionVisibility() {
     });
 }
 
+function initSectionControls() {
+    applySectionOrder();
+    var collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem('jx_section_collapsed') || '{}'); } catch(e) {}
+
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        var key = section.dataset.section;
+        var hd = section.querySelector('.section-hd');
+        if (!hd) return;
+        section.setAttribute('draggable', 'true');
+        section.classList.toggle('collapsed', collapsed[key] === true);
+        if (!hd.querySelector('.section-arrow')) {
+            var arrow = document.createElement('span');
+            arrow.className = 'section-arrow';
+            arrow.textContent = '›';
+            hd.insertBefore(arrow, hd.firstChild);
+        }
+        if (!hd.querySelector('.section-drag')) {
+            var drag = document.createElement('span');
+            drag.className = 'section-drag';
+            drag.textContent = '⋮⋮';
+            hd.appendChild(drag);
+        }
+        hd.title = 'Click to collapse. Right-click to hide. Drag to reorder.';
+        hd.addEventListener('click', function(e) {
+            if (e.target.closest('button, input, select, a')) return;
+            section.classList.toggle('collapsed');
+            saveSectionCollapse();
+        });
+        hd.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            setSectionVisible(key, false);
+            var cb = document.querySelector('.section-vis-cb[data-section="' + key + '"]');
+            if (cb) cb.checked = false;
+            saveSectionVisibility();
+            toast((SECTION_LABELS[key] || key) + ' hidden. Re-enable in Settings.');
+        });
+        section.addEventListener('dragstart', function(e) {
+            e.dataTransfer.setData('text/plain', key);
+            section.classList.add('dragging');
+        });
+        section.addEventListener('dragend', function() {
+            section.classList.remove('dragging');
+            saveSectionOrder();
+        });
+        section.addEventListener('dragover', function(e) {
+            var dragging = document.querySelector('section.dragging');
+            if (!dragging || dragging === section) return;
+            e.preventDefault();
+            var box = section.getBoundingClientRect();
+            var after = e.clientY > box.top + box.height / 2;
+            section.parentNode.insertBefore(dragging, after ? section.nextSibling : section);
+        });
+    });
+}
+
 function setSectionVisible(key, visible) {
     var el = document.querySelector('section[data-section="' + key + '"]');
     if (el) el.style.display = visible ? '' : 'none';
@@ -1062,6 +1733,116 @@ function saveSectionVisibility() {
         state[cb.dataset.section] = cb.checked;
     });
     localStorage.setItem('jx_sections', JSON.stringify(state));
+}
+
+function saveSectionCollapse() {
+    var state = {};
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        state[section.dataset.section] = section.classList.contains('collapsed');
+    });
+    localStorage.setItem('jx_section_collapsed', JSON.stringify(state));
+}
+
+function applySectionOrder() {
+    var order;
+    try { order = JSON.parse(localStorage.getItem('jx_section_order') || '[]'); } catch(e) { order = []; }
+    if (!order || !order.length) order = SECTION_KEYS;
+    var area = document.querySelector('.scroll-area');
+    if (!area) return;
+    order.concat(SECTION_KEYS).forEach(function(key) {
+        var section = area.querySelector('section[data-section="' + key + '"]');
+        if (section) area.appendChild(section);
+    });
+}
+
+function saveSectionOrder() {
+    var order = [];
+    document.querySelectorAll('.scroll-area > section[data-section]').forEach(function(section) {
+        order.push(section.dataset.section);
+    });
+    localStorage.setItem('jx_section_order', JSON.stringify(order));
+}
+
+// ── tool search ────────────────────────────────────────────────────────────────
+
+function initToolSearch() {
+    document.querySelectorAll('[data-vis-item]').forEach(function(el) {
+        el.dataset.searchText = searchableText(el);
+    });
+    var input = document.getElementById('toolSearch');
+    if (input) input.addEventListener('input', applyToolSearch);
+}
+
+function toggleToolSearch() {
+    var bar = document.getElementById('searchBar');
+    var input = document.getElementById('toolSearch');
+    if (!bar || !input) return;
+    bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) {
+        input.focus();
+        input.select();
+    } else {
+        clearToolSearch();
+    }
+}
+
+function clearToolSearch() {
+    var input = document.getElementById('toolSearch');
+    if (input) input.value = '';
+    applyToolSearch();
+}
+
+function applyToolSearch() {
+    var input = document.getElementById('toolSearch');
+    var query = normalizeSearch(input ? input.value : '');
+    document.body.classList.toggle('searching', !!query);
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        var hasMatch = !query;
+        section.querySelectorAll('[data-vis-item]').forEach(function(el) {
+            var text = el.dataset.searchText || searchableText(el);
+            var match = !query || fuzzyMatch(query, text);
+            el.classList.toggle('search-hidden', !match);
+            if (match) hasMatch = true;
+        });
+        section.classList.toggle('search-empty', !hasMatch);
+        if (query && hasMatch) section.classList.remove('collapsed');
+    });
+}
+
+function searchableText(el) {
+    var text = (el.textContent || '') + ' ' + (el.id || '') + ' ' + (el.dataset.visItem || '');
+    return normalizeSearch(text);
+}
+
+function normalizeSearch(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '');
+}
+
+function fuzzyMatch(query, text) {
+    if (!query) return true;
+    if (text.indexOf(query) !== -1) return true;
+    var words = text.split(' ');
+    var parts = query.split(' ');
+    for (var p = 0; p < parts.length; p++) {
+        var ok = false;
+        for (var w = 0; w < words.length; w++) {
+            if (words[w].indexOf(parts[p]) !== -1 || levenshtein(parts[p], words[w]) <= Math.max(1, Math.floor(parts[p].length / 3))) { ok = true; break; }
+        }
+        if (!ok) return false;
+    }
+    return true;
+}
+
+function levenshtein(a, b) {
+    var m = [], i, j;
+    for (i = 0; i <= b.length; i++) m[i] = [i];
+    for (j = 0; j <= a.length; j++) m[0][j] = j;
+    for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+            m[i][j] = b.charAt(i - 1) === a.charAt(j - 1) ? m[i - 1][j - 1] : Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
+        }
+    }
+    return m[b.length][a.length];
 }
 
 // ── beat detection ─────────────────────────────────────────────────────────────
@@ -1317,6 +2098,7 @@ function run(script) {
     cs.evalScript(script, function (result) {
         var res = parseResult(result);
         var ok  = !!(res && res.success);
+        if (!ok) lastDevError = (res && res.message) ? res.message : String(result || 'Unknown error');
         actionsRun++;
         var d = new Date();
         var t = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
@@ -1331,7 +2113,7 @@ function run(script) {
 }
 
 function parseResult(raw) {
-    try { return JSON.parse(raw); } catch (e) { toast('Something went wrong.', 'error'); return null; }
+    try { return JSON.parse(raw); } catch (e) { lastDevError = String(raw || e); toast('Something went wrong.', 'error'); return null; }
 }
 
 function shortDate() {

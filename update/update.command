@@ -29,7 +29,7 @@ echo "Downloading $VERSION..."
 TMP_DIR="$(mktemp -d)"
 ZIP_FILE="$TMP_DIR/jx_update.zip"
 
-curl -L -s -o "$ZIP_FILE" "$DOWNLOAD_URL"
+curl -L --fail --progress-bar -o "$ZIP_FILE" "$DOWNLOAD_URL"
 CURL_STATUS=$?
 
 if [ $CURL_STATUS -ne 0 ] || [ ! -f "$ZIP_FILE" ]; then

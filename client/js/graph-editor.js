@@ -19,6 +19,11 @@ var graphEditor = (function () {
     var isDrawing   = false;
     var drawPts     = [];
     var savedCurves = JSON.parse(localStorage.getItem('jx_curves') || '[]');
+    var graphMenus  = JSON.parse(localStorage.getItem('jx_graph_menus') || '[]');
+    var activeMenu  = localStorage.getItem('jx_graph_menu_active') || 'main';
+    var customIconSize = parseInt(localStorage.getItem('jx_graph_icon_size'), 10) || 74;
+    if (!graphMenus || !graphMenus.length) graphMenus = [{ id: 'main', name: 'Main' }];
+    normalizeCurveMenus();
 
     var PRESETS = {
         linear:    { label: 'Linear',   h1: { x: 0.33, y: 0.33 }, h2: { x: 0.67, y: 0.67 } },
@@ -40,13 +45,15 @@ var graphEditor = (function () {
     function init(el) {
         canvas = el;
         ctx    = canvas.getContext('2d');
+        applyCustomIconSize();
 
         var sr = parseFloat(localStorage.getItem('jx_y_range'));
         if (!isNaN(sr) && sr >= 0.3 && sr <= 10) { Y_RANGE = sr; updateYBounds(); }
 
-        window.addEventListener('mousedown', onDown);
+        canvas.addEventListener('mousedown', onDown);
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup',   onUp);
+        canvas.addEventListener('mouseleave', onLeave);
         canvas.addEventListener('wheel', onWheel, { passive: false });
 
         requestAnimationFrame(function () { setupSize(); redraw(); });
@@ -113,9 +120,11 @@ var graphEditor = (function () {
         drawMode  = !drawMode;
         isDrawing = false;
         drawPts   = [];
+        dragging   = null;
         canvas.style.cursor = drawMode ? 'crosshair' : '';
         var btn = document.getElementById('btnDrawMode');
         if (btn) btn.classList.toggle('active', drawMode);
+        if (drawMode) setGraphPage('premade');
         redraw();
     }
 
@@ -222,18 +231,6 @@ var graphEditor = (function () {
         line(p0.x, p0.y, p3.x, p3.y);
         ctx.setLineDash([]);
 
-        // freehand sketch preview
-        if (drawPts.length > 1) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-            ctx.lineWidth   = 1.5;
-            ctx.setLineDash([2, 3]);
-            ctx.beginPath();
-            ctx.moveTo(drawPts[0].x, drawPts[0].y);
-            for (var i = 1; i < drawPts.length; i++) ctx.lineTo(drawPts[i].x, drawPts[i].y);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
         var c1 = toCanvas(h1);
         var c2 = toCanvas(h2);
 
@@ -259,6 +256,18 @@ var graphEditor = (function () {
         ctx.fillStyle = accent;
         dot(c1.x, c1.y, 3.5);
         dot(c2.x, c2.y, 3.5);
+
+        // freehand sketch preview, drawn last so it stays visible while sketching
+        if (drawPts.length > 1) {
+            ctx.strokeStyle = accent;
+            ctx.lineWidth   = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(drawPts[0].x, drawPts[0].y);
+            for (var i = 1; i < drawPts.length; i++) ctx.lineTo(drawPts[i].x, drawPts[i].y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         updateDisplay();
     }
@@ -291,9 +300,14 @@ var graphEditor = (function () {
 
     function onDown(e) {
         if (!canvas) return;
+        if (!insideCanvas(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
         var p = canvasXY(e);
         if (drawMode) {
-            if (insideCanvas(e)) { isDrawing = true; drawPts = [p]; }
+            isDrawing = true;
+            drawPts = [p];
+            redraw();
             return;
         }
         if      (hit(p.x, p.y, h1)) dragging = 'h1';
@@ -302,7 +316,11 @@ var graphEditor = (function () {
 
     function onMove(e) {
         if (drawMode) {
-            if (isDrawing) { drawPts.push(canvasXY(e)); redraw(); }
+            if (isDrawing) {
+                e.preventDefault();
+                drawPts.push(canvasXY(e));
+                redraw();
+            }
             return;
         }
         if (!dragging) return;
@@ -318,9 +336,18 @@ var graphEditor = (function () {
             isDrawing = false;
             if (drawPts.length >= 4) fitBezierFromPoints(drawPts);
             drawPts = [];
+            redraw();
             return;
         }
         dragging = null;
+    }
+
+    function onLeave() {
+        if (!drawMode || !isDrawing) return;
+        isDrawing = false;
+        if (drawPts.length >= 4) fitBezierFromPoints(drawPts);
+        drawPts = [];
+        redraw();
     }
 
     // ── display ───────────────────────────────────────────────────────────────────
@@ -348,6 +375,7 @@ var graphEditor = (function () {
         h1 = { x: p.h1.x, y: p.h1.y };
         h2 = { x: p.h2.x, y: p.h2.y };
         redraw();
+        setGraphPage('premade');
         document.querySelectorAll('.ease-preset-card').forEach(function (el) {
             el.classList.toggle('active', el.dataset.preset === name);
         });
@@ -360,8 +388,45 @@ var graphEditor = (function () {
 
     function saveCurve(name) {
         savedCurves.push({ id: Date.now().toString(), name: name, date: shortDate(),
-                           h1: { x: h1.x, y: h1.y }, h2: { x: h2.x, y: h2.y } });
+                           menuId: activeMenu, h1: { x: h1.x, y: h1.y }, h2: { x: h2.x, y: h2.y } });
         localStorage.setItem('jx_curves', JSON.stringify(savedCurves));
+        renderCurveLibrary();
+        setGraphPage('custom');
+    }
+
+    function addCurves(curves) {
+        if (!curves || !curves.length) return 0;
+        var added = 0;
+        for (var i = 0; i < curves.length; i++) {
+            var c = curves[i];
+            if (!c || !isFinite(c.h1.x) || !isFinite(c.h1.y) || !isFinite(c.h2.x) || !isFinite(c.h2.y)) continue;
+            savedCurves.push({
+                id: String(Date.now()) + '_' + i,
+                name: c.name || ('Flow Graph ' + (savedCurves.length + 1)),
+                date: shortDate(),
+                menuId: activeMenu,
+                h1: { x: clamp01(parseFloat(c.h1.x)), y: clampRange(parseFloat(c.h1.y)) },
+                h2: { x: clamp01(parseFloat(c.h2.x)), y: clampRange(parseFloat(c.h2.y)) }
+            });
+            added++;
+        }
+        localStorage.setItem('jx_curves', JSON.stringify(savedCurves));
+        renderCurveLibrary();
+        if (added) setGraphPage('custom');
+        return added;
+    }
+
+    function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+    function clampRange(v) { return Math.max(-Y_RANGE, Math.min(Y_RANGE, v)); }
+
+    function setGraphPage(page) {
+        var active = page === 'custom' ? 'custom' : 'premade';
+        document.querySelectorAll('[data-graph-tab]').forEach(function (el) {
+            el.classList.toggle('active', el.dataset.graphTab === active);
+        });
+        document.querySelectorAll('[data-graph-page]').forEach(function (el) {
+            el.classList.toggle('active', el.dataset.graphPage === active);
+        });
         renderCurveLibrary();
     }
 
@@ -369,6 +434,56 @@ var graphEditor = (function () {
         savedCurves = savedCurves.filter(function (c) { return c.id !== id; });
         localStorage.setItem('jx_curves', JSON.stringify(savedCurves));
         renderCurveLibrary();
+    }
+
+    function normalizeCurveMenus() {
+        var valid = {};
+        for (var i = 0; i < graphMenus.length; i++) valid[graphMenus[i].id] = true;
+        if (!valid[activeMenu]) activeMenu = graphMenus[0].id;
+        for (var c = 0; c < savedCurves.length; c++) {
+            if (!savedCurves[c].menuId || !valid[savedCurves[c].menuId]) savedCurves[c].menuId = graphMenus[0].id;
+        }
+        localStorage.setItem('jx_graph_menus', JSON.stringify(graphMenus));
+        localStorage.setItem('jx_graph_menu_active', activeMenu);
+        localStorage.setItem('jx_curves', JSON.stringify(savedCurves));
+    }
+
+    function makeMenuId() { return 'menu_' + Date.now() + '_' + Math.floor(Math.random() * 999); }
+
+    function createMenu(name) {
+        name = (name || '').replace(/^\s+|\s+$/g, '');
+        if (!name) return false;
+        var menu = { id: makeMenuId(), name: name.substr(0, 28) };
+        graphMenus.push(menu);
+        activeMenu = menu.id;
+        normalizeCurveMenus();
+        renderCurveLibrary();
+        return true;
+    }
+
+    function setActiveMenu(id) {
+        for (var i = 0; i < graphMenus.length; i++) {
+            if (graphMenus[i].id === id) {
+                activeMenu = id;
+                localStorage.setItem('jx_graph_menu_active', activeMenu);
+                renderCurveLibrary();
+                return;
+            }
+        }
+    }
+
+    function setCustomIconSize(size) {
+        customIconSize = Math.max(48, Math.min(140, parseInt(size, 10) || 74));
+        localStorage.setItem('jx_graph_icon_size', String(customIconSize));
+        applyCustomIconSize();
+    }
+
+    function applyCustomIconSize() {
+        document.documentElement.style.setProperty('--graph-card-size', customIconSize + 'px');
+        var input = document.getElementById('graphIconSize');
+        var val = document.getElementById('graphIconSizeVal');
+        if (input) input.value = String(customIconSize);
+        if (val) val.textContent = String(customIconSize);
     }
 
     function loadCurve(c) {
@@ -416,15 +531,37 @@ var graphEditor = (function () {
         var box  = document.getElementById('curveLibrary');
         var list = document.getElementById('curveList');
         if (!box || !list) return;
-        if (!savedCurves.length) { box.style.display = 'none'; return; }
+        applyCustomIconSize();
+        renderMenuTabs();
+        var filtered = savedCurves.filter(function (c) { return (c.menuId || graphMenus[0].id) === activeMenu; });
+        if (!filtered.length) {
+            box.style.display = document.querySelector('[data-graph-tab="custom"].active') ? 'block' : 'none';
+            list.innerHTML = '<div class="graph-empty">No graphs in this menu yet.</div>';
+            return;
+        }
         box.style.display = 'block';
         list.innerHTML    = '';
-        savedCurves.forEach(function (c) { list.appendChild(makeCurveItem(c)); });
+        filtered.forEach(function (c) { list.appendChild(makeCurveItem(c)); });
+    }
+
+    function renderMenuTabs() {
+        var tabs = document.getElementById('curveMenuTabs');
+        if (!tabs) return;
+        tabs.innerHTML = '';
+        for (var i = 0; i < graphMenus.length; i++) {
+            var menu = graphMenus[i];
+            var btn = document.createElement('button');
+            btn.className = 'graph-menu-tab' + (menu.id === activeMenu ? ' active' : '');
+            btn.textContent = menu.name;
+            btn.addEventListener('click', (function(id) { return function() { setActiveMenu(id); }; })(menu.id));
+            tabs.appendChild(btn);
+        }
     }
 
     function makeCurveItem(c) {
-        var item    = document.createElement('div');
+        var item    = document.createElement('button');
         item.className = 'graph-item';
+        item.title = c.name;
 
         var preview = document.createElement('div');
         preview.className = 'graph-item-preview';
@@ -473,6 +610,11 @@ var graphEditor = (function () {
         getEaseValues:      getEaseValues,
         getCurve:           getCurve,
         saveCurve:          saveCurve,
+        addCurves:          addCurves,
+        createMenu:         createMenu,
+        setCustomIconSize:  setCustomIconSize,
+        getCustomIconSize:  function () { return customIconSize; },
+        setGraphPage:       setGraphPage,
         renderCurveLibrary: renderCurveLibrary,
         redraw:             redraw,
         refreshSize:        refreshSize,
