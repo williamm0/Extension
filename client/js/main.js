@@ -117,24 +117,24 @@ function applyInterfaceMode(mode) {
 // ── greeting ───────────────────────────────────────────────────────────────────
 
 var GREETINGS_MORNING = [
-    'gm bestie ☀️', 'morning edit goblin 😭', 'timeline just woke up fr ✨', 'fresh project, no crumbs 💅',
-    'locking in early is crazy 😭', 'new day new slay 🎬', 'keyframes for breakfast?? 😮‍💨',
-    'main character morning 💫', 'we are so back ☀️', 'render queue can wait bestie 💅'
+    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', 'you're up early',
+    'locking in early is crazy 😭', 'mornin 💋', 'keyframes for breakfast?? 😭',
+    'who are you editing this early?', 'we are so back', 'remember a watermark before rendering'
 ];
 var GREETINGS_AFTERNOON = [
-    'keep cooking 🔥', 'no because this timeline eats 💅', 'edit mode activated fr 🎬', 'serving keyframes rn ✨',
-    'this is giving productive 😭', 'timeline looking expensive 💫', 'let him cook 🔥',
-    'average editor W 😮‍💨', 'the comp is comping 💅', 'lowkey locked in 🎧'
+    'keep cooking', 'no because this is so good', 'loving it', 'serving keyframes',
+    'this is giving productive', 'timeline looking almost expensive as you ',
+    'W', 'the comp is comping', 'lowkey locked in 🎧'
 ];
 var GREETINGS_EVENING = [
-    'night shift editor arc 🌙', 'still cooking is wild 😭', 'this edit better go platinum 💿', 'cozy timeline era ✨',
-    'after dark keyframes hit different 😮‍💨', 'welcome back to the grind bestie 🎬', 'we do not miss 💅',
-    'evening flow state unlocked 🎧', 'this comp has aura 💫', 'one more tweak famous last words 😭'
+    'night shift editor arc', 'still cooking is wild 😭', 'this edit better go platinum',
+    'hope your day has been any good', 'we do not miss',
+    'evening flow state', 'take your time', 'one more tweak famous last words'
 ];
 var GREETINGS_NIGHT = [
-    'sleep schedule found dead 🦉', '3am editor behaviour 😭', 'touch grass tomorrow maybe 🌿', 'night owl final boss 🌙',
-    'render goblin hours 💀', 'this is chronically online but valid ✨', 'hydration check bestie 💧',
-    'the timeline has you in a chokehold 😮‍💨', 'late-night slay mode 💅', 'one more keyframe surely 😭'
+    'sleep schedule found dead', '3am editor behaviour 😭', 'touch grass tomorrow maybe', 'night owl final boss',
+    'render goblin hours 💀', 'remember to drink water!',
+    ' does the timeline have you in a chokehold?', 'one more keyframe surely 😭'
 ];
 
 function pickGreeting() {
