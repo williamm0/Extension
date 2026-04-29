@@ -3,9 +3,9 @@
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks, cutting 10 clicks to one. The panel is open source, so you can inspect how I built it.
 
 ---
-## KNOWN BUGS & ERRORS 
+## NONE KNOWN BUGS & ERRORS 
 
-- Update system not working, fixed in pre-release with a new system.
+- No known bugs in the current stable build.
 
 If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@jxffx.com)
 
@@ -18,10 +18,11 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Toggle frame blending (Frame Mix or Pixel Motion) across multiple layers at once
 - Enable motion blur on selected layers with comp-level blur switched on automatically
 - Trim the comp duration to the work area, shifting all keyframes so the timeline starts at zero
-- Auto-Label Layers: colors layers by type and renames them — footage as `Clip_001`, text as `Text_001`, shapes as `Shape_001`, adjustment layers as `Adj_001`. Label colors are configurable per type in Settings
+- Auto-Label Layers: colors layers by type and renames them - footage as `Clip_001`, text as `Text_001`, shapes as `Shape_001`, adjustment layers as `Adj_001`. Label colors are configurable per type in Settings
 - Center Anchor: moves each layer's anchor point to comp center while keeping the layer visually in place
 - Null from Selection: creates a null at comp center and parents all selected layers to it
 - Sequence Layers: places selected layers end-to-end in time with an optional gap between each
+- Layer Library: save selected layers as permanent reusable stacks, preview saved layer types, open the saved-stacks folder, and add stacks back later across AE projects
 
 **Animation**
 - Word-by-Word: splits a text layer by word, staggers in-points and fades in opacity per word (offset in ms, adjustable)
@@ -51,6 +52,7 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 **Settings**
 - Color wheel: a 5th swatch next to the presets opens a full OS color picker; any hex color gets applied with derived soft/mid variants
 - Font selector: System / Mono / Serif in settings, applied via --font-ui CSS variable
+- Dyslexia Friendly font option in Settings and onboarding
 - Greeting: time-based ("good morning", "afternoon", "working late"…) with your name shown in the header; set your name in settings
 - Developer page: new </> icon in the header shows session action count, a live log of the last 30 tool calls with timestamps and ok/fail status, and a dump of all jx_* localStorage keys. Also has a "Clear All" button
 - New dev tools: diagnostics, exports, host ping, graph/section data tools, UI smoke tests, settings backups/restores, storage validation/repair, update checks, and owner-only advanced maintenance tools
@@ -60,7 +62,7 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 - Dropdown sections: every panel section can be opened/closed from its header so you do not have to scroll as much
 - Reorder sections: drag section headers to rearrange the panel order; your order is saved in preferences
 - Hide sections: right-click a section header or use Settings to hide entire sections you do not use
-- Auto-updates: checks GitHub on load, downloads and installs in-panel with percentage progress and a macOS-safe fallback updater. Option to include pre-releases
+- Auto-updates: checks GitHub, opens the installed jx Tools Installer first, falls back to the installer download, and supports dismissing or snoozing notices
 - Editing timer which shows how long you've been editing for
 
 ---
@@ -68,16 +70,6 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 ## Install
 
 [MacOS and Windows Installer](https://github.com/williamm0/Extension/releases/tag/INSTALLER)
-
----
-
-**macOS:** the `.command` file needs execute permission before it'll run.
-
-1. Open Terminal
-2. Type `chmod +x ` (with a space after the x)
-3. Drag `install.command` into the Terminal window — the path fills in automatically
-4. Press Enter
-5. Double-click the file to run it
 
 ---
 
