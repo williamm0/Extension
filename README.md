@@ -2,6 +2,7 @@
 
 A panel I built for my own workflow that ended up saving enough time I figured I'd share it. It automates repetitive tasks.
 The panel is open source, so you can inspect how I built it.
+
 ---
 <img width="2500" height="1080" alt="image_preview" src="https://github.com/user-attachments/assets/4f23d10e-d8f2-4cb2-9f38-4073e2ad9b3e" />
 
