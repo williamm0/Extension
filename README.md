@@ -25,7 +25,7 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 
 **Animation**
 - Word-by-Word: splits a text layer by word, staggers in-points and fades in opacity per word (offset in ms, adjustable)
-- Beat Detection — two modes:
+- Beat Detection, two modes:
   - **Beat Marking**: analyses the audio layer in your comp, detects tempo via autocorrelation, and places comp markers at every beat. Sensitivity slider controls how strict the beat threshold is. Shows detected BPM and marker count
   - **Frequency**: places markers separately for bass (20–250 Hz) and treble (4k+ Hz) hits. Each band has an independent threshold slider and minimum gap control. Markers are labeled in the AE timeline so you can tell them apart
 - Snap Keys to Markers: snaps selected keyframes to the nearest comp marker
