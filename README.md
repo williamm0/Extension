@@ -74,6 +74,8 @@ If you experience any bugs, reach out to me by email: [jx@jxffx.com](mailto:jx@j
 
 [MacOS and Windows Installer](https://github.com/williamm0/Extension/releases/tag/INSTALLER)
 
+https://github.com/user-attachments/assets/d042f9b3-5858-4776-a597-c23347b22087
+
 ---
 
 Tested on After Effects 2026, Windows 11 and macOS Tahoe 26.4.1.
