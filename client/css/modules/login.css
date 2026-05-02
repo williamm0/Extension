@@ -1,0 +1,19 @@
+.login-card::after {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+}
+.login-avatar-picker:hover .login-avatar {
+    border-color: var(--accent);
+    box-shadow: 0 0 28px var(--accent-soft), inset 0 0 18px rgba(255,255,255,0.03);
+}
+.login-avatar-picker:hover .login-avatar-plus {
+    transform: scale(1.05);
+}
+.onboarding-actions .tool-btn {
+    min-width: 82px;
+}

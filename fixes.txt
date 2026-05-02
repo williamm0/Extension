@@ -1,0 +1,17 @@
+v2.0.1-alpha fixes
+
+- Fixed old version labels so the alpha reports 2.0.1-alpha consistently.
+- Replaced the placeholder curve description mapping with a generated local curve model pack.
+- Removed stale duplicate curve weight files so the latest 18,168-prompt metadata loads.
+- Removed local-AI wording from panel copy.
+- Removed stale footer credit link behavior after the profile footer redesign.
+- Fixed profile picture upload in browser previews with FileReader support.
+- Added profile image crop controls with zoom and drag positioning.
+- Fixed custom background upload fallback for browser preview.
+- Fixed background visibility by moving backgrounds from an unreliable pseudo layer to a real background layer.
+- Fixed custom background rendering so data URLs and file paths both apply to the visible background layer.
+- Fixed automation defaults so built-in automation rules are disabled until the user enables them.
+- Fixed custom automation creation so new rules are created disabled by default.
+- Fixed missing DOM hooks found during debug passes.
+- Cleaned UI copy and removed em dashes from checked project files.
+- Added syntax and DOM ID audits for the current alpha pass.

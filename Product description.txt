@@ -1,0 +1,30 @@
+## What is new?
+
+---
+
+- Real background system: Grid, Aurora, Noise, and Custom Image now render behind the panel through a dedicated background layer.
+- Custom image backgrounds: browser preview and CEP upload paths both work, with compression for safer storage.
+- Cleaner v2 UI: the main panel and Settings now share a more consistent compact style, closer to the original feel but easier to scan.
+- Notes tab: save project reminders, timestamps, ideas, and edit notes inside the panel.
+- Automations: Automate a good amount of stuff.
+- Curve suggestions rotate every launch, so the graph prompt chips feel fresh and useful.
+- Curve description model supports short practical terms like zoom in, zoom out, slam in, slam out, mid deep, fast slow, and slow fast.
+- Profile picture upload and crop flow is more reliable.
+- v2.0.1-alpha labels are synced across the panel, host, manifest, README, and release notes.
+
+Main features
+
+- Project media import from drag and drop, direct media links, or local file search.
+- Layer tools for precompose, frame blending, motion blur, auto-labeling, anchor centering, null parenting, sequencing, and reusable layer stacks.
+- Animation tools for word timing, beat markers, frequency markers, and snapping keys to markers.
+- FX tools for echo trails and loop duplicates.
+- Preset tools for loading .ffx files and saving quick preset groups.
+- Graph tools for drawing, generating, saving, organizing, and importing easing curves.
+- Settings for themes, fonts, backgrounds, profile identity, section visibility, simple mode, and developer diagnostics.
+
+Current debug status
+
+- Script syntax checks pass.
+- DOM ID reference check passes.
+- Background layer, notes tab, automation options, and curve suggestion rotation are wired.
+- No known blocking bugs in the current alpha pass.

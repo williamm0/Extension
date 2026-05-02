@@ -1,0 +1,24 @@
+section {
+    border-bottom-color: rgba(255,255,255,0.055);
+}
+.section-label {
+    letter-spacing: 1.25px;
+}
+.section-bar {
+    box-shadow: 0 0 10px var(--accent-mid);
+}
+.file-zone,
+.ease-preset-card,
+.graph-item,
+.layer-lib-item,
+.preset-item {
+    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.file-zone:hover,
+.ease-preset-card:hover,
+.graph-item:hover,
+.layer-lib-item:hover,
+.preset-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18), 0 0 12px rgba(192,80,96,0.055);
+}

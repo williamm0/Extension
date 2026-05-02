@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jx v2</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/modules/profile.css">
+  <link rel="stylesheet" href="css/modules/polish.css">
+  <link rel="stylesheet" href="css/modules/controls.css">
+  <link rel="stylesheet" href="css/modules/cards.css">
+  <link rel="stylesheet" href="css/modules/login.css">
+  <link rel="stylesheet" href="css/modules/v2-simple.css">
+  <link rel="stylesheet" href="css/modules/settings-accessible.css">
+  <link rel="stylesheet" href="css/modules/curve-glow.css">
+  <link rel="stylesheet" href="css/modules/profile-cropper.css">
+  <link rel="stylesheet" href="css/modules/v2-old-balance.css">
+  <style id="customFontStyle"></style>
+
+  <script>
+    if (window.location.search.indexOf('onboard=1') !== -1) {
+      document.documentElement.className += ' force-onboard';
+    }
+  </script>
+</head>
+<body>
+<div id="backgroundLayer" aria-hidden="true"></div>
+
+<div id="app">
+
+  <header>
+    <div class="header-left">
+      <span class="brand">jx<span class="brand-ver" id="brandVer"></span></span>
+      <span class="greeting" id="greeting"></span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="favoritesBtn" title="Show favorite tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="presetsBtn" title="Quick Presets">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="layerLibBtn" title="Layer Library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 3 7l9 5 9-5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="automationsBtn" title="Automations">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2 3 14h7l-1 8 11-14h-7z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="notesBtn" title="Notes">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16v16H4z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="searchBtn" title="Search tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="devBtn" title="Developer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="updateBanner">
+    <div class="update-dot"></div>
+    <span class="update-text"></span>
+    <button class="update-btn" id="btnUpdate">Update</button>
+    <button class="update-close" id="btnDismissUpdate" title="Hide update notice">×</button>
+  </div>
+
+  <div id="searchBar" class="search-bar hidden">
+    <input type="text" id="toolSearch" class="search-input" placeholder="Search tools, even with typos..." autocomplete="off" spellcheck="false">
+    <button class="icon-btn" id="clearSearch" title="Clear search">×</button>
+  </div>
+
+  <div class="scroll-area">
+
+    <section data-section="project">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Project Files</span>
+      </div>
+      <div class="section-body">
+        <div class="file-zone universal-file-zone" id="projectDropZone" data-vis-item="project.import">
+          <span class="file-zone-name">Drop image, video, audio, or URL</span>
+          <span class="file-zone-hint">Web links are saved into this project's jx folder and imported.</span>
+        </div>
+        <input type="file" id="projectFileInput" accept="image/*,video/*,audio/*" multiple style="display:none">
+        <div class="input-row" data-vis-item="project.weburl">
+          <input type="text" id="webImportUrl" class="text-input-sm" placeholder="Paste media link" autocomplete="off" spellcheck="false">
+          <button class="tool-btn small" id="btnImportWebUrl">Add</button>
+        </div>
+        <div class="section-divider" data-vis-item="project.systemsearch"></div>
+        <div class="input-row" data-vis-item="project.systemsearch">
+          <input type="text" id="systemFileSearch" class="text-input-sm" placeholder="Search Mac files by name" autocomplete="off" spellcheck="false">
+          <button class="tool-btn small" id="btnSystemFileSearch">Search</button>
+        </div>
+        <div class="file-search-results" id="systemFileResults" data-vis-item="project.systemsearch"></div>
+      </div>
+    </section>
+
+    <section data-section="layers">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Layers</span>
+      </div>
+      <div class="section-body">
+        <button class="tool-btn" id="btnPrecompose" data-vis-item="layers.precompose">Precompose Selected</button>
+        <button class="tool-btn" id="btnFrameBlend" data-vis-item="layers.frameblend">Frame Blending</button>
+        <button class="tool-btn" id="btnMotionBlur" data-vis-item="layers.motionblur">Motion Blur</button>
+        <button class="tool-btn" id="btnTrimComp"   data-vis-item="layers.trimcomp">Trim Comp to Work Area</button>
+        <button class="tool-btn" id="btnAutoLabel"  data-vis-item="layers.autolabel">Auto-Label Layers</button>
+        <button class="tool-btn" id="btnCenterAnchor" data-vis-item="layers.centeranchor">Center Anchor</button>
+        <div class="section-divider"></div>
+        <button class="tool-btn" id="btnNullFromSel" data-vis-item="layers.null">Null from Selection</button>
+        <div class="input-row" data-vis-item="layers.sequence">
+          <label>Gap</label>
+          <div class="input-unit-wrap">
+            <input type="number" id="seqGap" class="num-input" value="0" min="0" max="60" step="0.1">
+            <span class="input-unit">s</span>
+          </div>
+        </div>
+        <button class="tool-btn" id="btnSequence" data-vis-item="layers.sequence">Sequence Layers</button>
+
+        <div class="section-divider" data-vis-item="layers.rename"></div>
+        <div class="input-row" data-vis-item="layers.rename">
+          <label>Find</label>
+          <input type="text" id="renameFind" class="text-input-sm" placeholder="" autocomplete="off" spellcheck="false">
+          <label>→</label>
+          <input type="text" id="renameReplace" class="text-input-sm" placeholder="" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="input-row" data-vis-item="layers.rename">
+          <label>Prefix</label>
+          <input type="text" id="renamePrefix" class="text-input-sm" placeholder="" autocomplete="off" spellcheck="false">
+          <label>Suffix</label>
+          <input type="text" id="renameSuffix" class="text-input-sm" placeholder="" autocomplete="off" spellcheck="false">
+        </div>
+        <button class="tool-btn" id="btnRenameLayers" data-vis-item="layers.rename">Rename Layers</button>
+      </div>
+    </section>
+
+    <section data-section="animation">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Animation</span>
+      </div>
+      <div class="section-body">
+        <div class="input-row" data-vis-item="animation.wordanimate">
+          <label>Word offset</label>
+          <div class="input-unit-wrap">
+            <input type="number" id="wordOffset" class="num-input" value="80" min="10" max="2000" step="10">
+            <span class="input-unit">ms</span>
+          </div>
+        </div>
+        <button class="tool-btn" id="btnWordAnimate" data-vis-item="animation.wordanimate">Word-by-Word</button>
+
+        <div class="section-divider"></div>
+
+        <div class="beat-mode-toggle" data-vis-item="animation.beatdetect">
+          <button class="beat-mode-btn active" data-mode="bpm">BPM</button>
+          <button class="beat-mode-btn" data-mode="freq">Frequency</button>
+        </div>
+
+        <div id="beatPanel_bpm" data-vis-item="animation.beatdetect">
+          <div class="btn-row" style="margin-bottom:4px">
+            <button class="tool-btn small flex-1" id="btnTapTempo">Tap Tempo</button>
+            <span class="range-val" id="tapDisplay" style="min-width:56px;text-align:center"></span>
+            <button class="tool-btn small accent" id="btnApplyTap" style="display:none">Place</button>
+          </div>
+          <div class="input-row">
+            <label>Sensitivity</label>
+            <input type="range" id="bpmSensitivity" class="range-input" min="1" max="100" value="75">
+            <span class="range-val" id="bpmSensVal">75</span>
+          </div>
+          <div class="beat-result" id="bpmResult"></div>
+          <button class="tool-btn" id="btnDetectBpm">Detect BPM &amp; Place Markers</button>
+        </div>
+
+        <div id="beatPanel_freq" style="display:none" data-vis-item="animation.beatdetect">
+          <div class="freq-band">
+            <div class="freq-band-hd">
+              <label class="checkbox-label"><input type="checkbox" id="freqBassEnable" checked> Bass <span class="freq-range-hint">20-250 Hz</span></label>
+            </div>
+            <div class="freq-band-body" id="freqBassBody">
+              <div class="input-row">
+                <label>Threshold</label>
+                <input type="range" id="freqBassThresh" class="range-input" min="1" max="99" value="55">
+                <span class="range-val" id="freqBassThreshVal">55</span>
+              </div>
+              <div class="input-row">
+                <label>Min gap</label>
+                <div class="input-unit-wrap">
+                  <input type="number" id="freqBassGap" class="num-input" value="200" min="50" max="2000" step="10">
+                  <span class="input-unit">ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="freq-band">
+            <div class="freq-band-hd">
+              <label class="checkbox-label"><input type="checkbox" id="freqTrebleEnable"> Treble <span class="freq-range-hint">4k+ Hz</span></label>
+            </div>
+            <div class="freq-band-body disabled" id="freqTrebleBody">
+              <div class="input-row">
+                <label>Threshold</label>
+                <input type="range" id="freqTrebleThresh" class="range-input" min="1" max="99" value="70">
+                <span class="range-val" id="freqTrebleThreshVal">70</span>
+              </div>
+              <div class="input-row">
+                <label>Min gap</label>
+                <div class="input-unit-wrap">
+                  <input type="number" id="freqTrebleGap" class="num-input" value="100" min="50" max="2000" step="10">
+                  <span class="input-unit">ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="tool-btn" id="btnDetectFreq">Detect &amp; Place Markers</button>
+        </div>
+
+        <button class="tool-btn" id="btnSnapToMarkers" data-vis-item="animation.snaptomarkers">Snap Keys to Markers</button>
+        <button class="tool-btn" id="btnClearMarkers" data-vis-item="animation.snaptomarkers">Clear Comp Markers</button>
+      </div>
+    </section>
+
+    <section data-section="fx">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">FX</span>
+      </div>
+      <div class="section-body">
+        <div class="input-row" data-vis-item="fx.echotrail">
+          <label>Steps</label>
+          <input type="number" id="echoSteps" class="num-input" value="3" min="1" max="12" step="1">
+          <label style="margin-left:6px">Offset</label>
+          <div class="input-unit-wrap">
+            <input type="number" id="echoOffset" class="num-input" value="0.10" min="0.01" max="2" step="0.01">
+            <span class="input-unit">s</span>
+          </div>
+        </div>
+        <button class="tool-btn" id="btnEchoTrail" data-vis-item="fx.echotrail">Echo Trail</button>
+
+        <div class="section-divider"></div>
+
+        <div class="input-row" data-vis-item="fx.loopduplicate">
+          <label>Repeats</label>
+          <input type="number" id="loopRepeats" class="num-input" value="2" min="1" max="32" step="1">
+        </div>
+        <button class="tool-btn" id="btnLoopDuplicate" data-vis-item="fx.loopduplicate">Loop Duplicate</button>
+      </div>
+    </section>
+
+    <section data-section="colour">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Colour</span>
+      </div>
+      <div class="section-body">
+
+        <div class="file-zone" id="fileZone" data-vis-item="colour.ffxpreset">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span class="file-zone-name" id="fileZoneName">Drop your .ffx file here</span>
+          <span class="file-zone-hint" id="fileZoneHint">or have a browse</span>
+          <input type="file" id="ffxInput" accept=".ffx" style="display:none">
+        </div>
+
+        <button class="tool-btn accent" id="btnApplyColor" data-vis-item="colour.ffxpreset" disabled>
+          Apply to Adjustment Layer
+        </button>
+
+      </div>
+    </section>
+
+    <section data-section="keyframes">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Keyframes</span>
+      </div>
+      <div class="section-body">
+        <button class="tool-btn" id="btnStretch"     data-vis-item="keyframes.fitkeys">Fit Keys to Clip</button>
+        <button class="tool-btn" id="btnReverseKeys" data-vis-item="keyframes.reversekeys">Reverse Keyframes</button>
+      </div>
+    </section>
+
+    <section data-section="easing">
+      <div class="section-hd">
+        <span class="section-bar"></span>
+        <span class="section-label">Easing</span>
+      </div>
+      <div class="section-body">
+
+        <div class="ease-canvas-wrap" data-vis-item="easing.graph">
+          <canvas id="easeCanvas" class="ease-canvas"></canvas>
+          <button class="ease-size-btn" id="btnEaseBig" title="Make graph bigger">Big</button>
+          <button class="ease-draw-btn" id="btnDrawMode" title="Draw mode - sketch a curve freehand">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <div class="ease-resize-handle" id="easeResize" title="Drag to resize"></div>
+        </div>
+        <div id="easeDisplay" class="ease-display" data-vis-item="easing.graph">Out 35%  ·  In 35%</div>
+        <div class="graph-describe" data-vis-item="easing.describe">
+          <textarea id="graphPrompt" class="graph-prompt" rows="3" placeholder="Describe motion: anxious bounce, dreamy float, angry snap, heavy cinematic drift..."></textarea>
+          <div class="curve-ai-chips" id="curveAiExamples"></div>
+          <div class="curve-ai-meter" id="curveAiMeter"><span></span></div>
+          <div class="btn-row">
+            <button class="tool-btn small flex-1" id="btnDescribeGraph">Generate from Words</button>
+            <button class="tool-btn small" id="btnSaveDescribedGraph">Save</button>
+          </div>
+          <div class="curve-ai-meta" id="curveAiMeta"></div>
+          <div class="settings-path hidden" id="graphPromptHint"></div>
+        </div>
+        <button class="tool-btn small graph-save-btn" id="btnSaveCurve" data-vis-item="easing.apply">Save Current Graph</button>
+
+        <div class="graph-tabs" data-vis-item="easing.presets">
+          <button class="graph-tab active" id="graphTabPremade" data-graph-tab="premade">Premade</button>
+          <button class="graph-tab" id="graphTabCustom" data-graph-tab="custom">Custom</button>
+        </div>
+
+        <div id="easePresetGrid" class="ease-preset-grid graph-page active" data-graph-page="premade" data-vis-item="easing.presets"></div>
+
+        <div class="btn-row" data-vis-item="easing.apply">
+          <button class="tool-btn flex-1 accent" id="btnApplyEase">Apply to Selected</button>
+          <button class="tool-btn small" id="btnCopyCSS" title="Copy CSS cubic-bezier()">CSS</button>
+        </div>
+
+        <div id="curveLibrary" class="graph-library graph-page" data-graph-page="custom" data-vis-item="easing.library" style="display:none">
+          <div class="graph-library-hd">
+            <span class="graph-library-label">Menus</span>
+            <button class="graph-menu-add" id="btnAddGraphMenu" title="New graph menu">+</button>
+          </div>
+          <div id="curveMenuTabs" class="graph-menu-tabs"></div>
+          <div id="curveList"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <button class="footer-profile" id="footerProfile" title="Open profile settings">
+      <span class="profile-avatar" id="profileAvatar">jx</span>
+      <span class="profile-meta"><span id="profileName">jx editor</span><span id="profileVersion">v2</span></span>
+    </button>
+    <button class="session-timer" id="sessionTimer" title="Reset time spent editing">Time spent editing 0:00:00</button>
+  </footer>
+
+</div>
+
+<!-- ── Automations view ─────────────────────────────────── -->
+<div id="automationsView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="automationsBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Automations</span>
+  </div>
+
+  <div class="settings-body">
+    <div class="settings-group automation-hero">
+      <div class="settings-group-label">Smart Rules</div>
+      <div class="settings-path">Rules run when files are added through jx project import. Delete custom rules any time.</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Built-in Automations</div>
+      <div class="automation-list" id="automationList"></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Create Custom Rule</div>
+      <div class="label-row">
+        <span class="label-row-text">When</span>
+        <select class="settings-select" id="automationTrigger">
+          <option value="audio-imported">Audio file added</option>
+          <option value="video-imported">Video file added</option>
+          <option value="image-imported">Image file added</option>
+          <option value="any-imported">Any file added</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Do</span>
+        <select class="settings-select" id="automationAction">
+          <option value="beat-markers">Mark beats</option>
+          <option value="auto-label">Auto-label item</option>
+          <option value="fit-comp">Fit comp to media</option>
+          <option value="make-folder">Move into media folder</option>
+          <option value="rename-clean">Clean filename</option>
+          <option value="open-footage">Open in footage viewer</option>
+          <option value="make-proxy-folder">Group in proxy folder</option>
+          <option value="stretch-comp">Match comp length</option>
+          <option value="add-start-marker">Add start marker</option>
+        </select>
+      </div>
+      <button class="tool-btn small accent" id="btnAddAutomation">Add Automation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Layer Library view ─────────────────────────────────── -->
+<div id="layerLibView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="layerLibBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Layer Library</span>
+  </div>
+
+  <div class="settings-body">
+    <div class="settings-group">
+      <div class="settings-group-label">Save Selected Layers</div>
+      <div class="settings-path">Stores selected layers permanently, available after closing AE and across new projects.</div>
+      <input type="text" id="layerLibName" class="settings-text-input" placeholder="Stack name" autocomplete="off" spellcheck="false">
+      <button class="tool-btn small accent" id="btnSaveLayerStack" style="margin-top:7px">Save Selected Layer Stack</button>
+      <button class="tool-btn small" id="btnOpenLayerLibraryFolder" style="margin-top:6px">Open Saved Stacks Folder</button>
+    </div>
+    <div class="settings-group">
+      <div class="settings-group-label">Saved Stacks</div>
+      <div class="layer-lib-list" id="layerLibList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── First-time login ─────────────────────────────── -->
+<div id="onboardingView" class="onboarding-view hidden">
+  <div class="onboarding-card login-card">
+    <div class="login-bg-grid"></div>
+    <div class="onboarding-orb"></div>
+    <div class="onboarding-top login-top">
+      <div>
+        <div class="onboarding-kicker">jx v2 alpha</div>
+        <div class="onboarding-title" id="onboardTitle">Welcome to your edit panel</div>
+      </div>
+      <button class="onboard-skip" id="onboardSkip">Skip</button>
+    </div>
+    <div class="onboarding-sub" id="onboardSub">Set your profile once. The panel changes live as you choose.</div>
+    <div class="onboarding-progress"><span id="onboardProgress"></span></div>
+
+    <div class="onboard-step active" data-step="0">
+      <div class="login-profile-row">
+        <label class="login-avatar-picker" title="Upload profile picture">
+          <span class="login-avatar" id="onboardAvatarPreview">jx</span>
+          <span class="login-avatar-plus">+</span>
+          <input type="file" id="onboardProfileImageInput" accept="image/*" style="display:none">
+        </label>
+        <div class="login-profile-copy">
+          <label class="onboarding-label" for="onboardName">Profile name</label>
+          <input type="text" id="onboardName" class="modal-input login-name-input" maxlength="24" placeholder="your editor name" autocomplete="off" spellcheck="false">
+          <div class="onboard-preview greeting-preview" id="onboardGreetingPreview">gm, editor 💅</div>
+        </div>
+      </div>
+      <div class="login-mini-note">Tap the circle to upload a profile picture for the footer.</div>
+    </div>
+
+    <div class="onboard-step" data-step="1">
+      <div class="onboarding-label">Pick your accent</div>
+      <div class="onboarding-options login-swatch-row">
+        <button class="theme-swatch onboard-theme active" data-theme="amber" style="--swatch:#c09050" title="Amber"></button>
+        <button class="theme-swatch onboard-theme" data-theme="blue" style="--swatch:#5090c0" title="Blue"></button>
+        <button class="theme-swatch onboard-theme" data-theme="green" style="--swatch:#6aab7a" title="Green"></button>
+        <button class="theme-swatch onboard-theme" data-theme="red" style="--swatch:#c05060" title="Red"></button>
+      </div>
+      <div class="onboard-preview theme-preview login-preview-card">
+        <span></span><strong>Preview button</strong><em>Accent changes live</em>
+      </div>
+    </div>
+
+    <div class="onboard-step" data-step="2">
+      <div class="onboarding-label">Choose the feel</div>
+      <div class="onboarding-pill-row">
+        <button class="onboard-pill onboard-look active" data-look="classic">Classic</button>
+        <button class="onboard-pill onboard-look" data-look="soft">Soft</button>
+        <button class="onboard-pill onboard-look" data-look="compact">Compact</button>
+      </div>
+      <div class="onboard-preview look-preview login-preview-card">
+        <div></div><div></div><div></div>
+      </div>
+    </div>
+
+    <div class="onboard-step" data-step="3">
+      <label class="onboarding-label" for="onboardFont">Pick a font</label>
+      <select class="settings-select" id="onboardFont">
+        <option value="system">System</option>
+        <option value="helvetica">Helvetica</option>
+        <option value="rounded">Rounded</option>
+        <option value="dyslexia">Dyslexia Friendly</option>
+        <option value="inter">Inter</option>
+        <option value="mono">Mono</option>
+        <option value="serif">Serif</option>
+        <option value="georgia">Georgia</option>
+      </select>
+      <div class="onboard-preview font-preview login-preview-card" id="onboardFontPreview">Timeline check: smooth keyframes only</div>
+    </div>
+
+    <div class="onboard-step" data-step="4">
+      <div class="onboarding-label">What sections should I show?</div>
+      <div class="section-vis-list login-section-list">
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="project" checked> Project Files</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="layers" checked> Layers</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="animation" checked> Animation</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="fx" checked> FX</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="colour" checked> Colour</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="keyframes" checked> Keyframes</label>
+        <label class="checkbox-label"><input type="checkbox" class="onboard-section" data-section="easing" checked> Easing</label>
+      </div>
+      <div class="onboard-preview section-preview login-preview-card" id="onboardSectionPreview">7 sections visible</div>
+    </div>
+
+    <div class="onboarding-actions">
+      <button class="tool-btn small" id="onboardBack">Back</button>
+      <button class="tool-btn small accent" id="onboardNext">Next</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Notes view -->
+<div id="notesView" class="settings-view">
+  <div class="settings-hd">
+    <button class="icon-btn" id="notesBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Notes</span>
+  </div>
+  <div class="settings-body notes-body">
+    <div class="settings-group notes-hero">
+      <div class="settings-group-label">Project Notes</div>
+      <div class="settings-path">Quick notes for edits, ideas, timestamps, and reminders.</div>
+    </div>
+    <div class="settings-group">
+      <textarea id="notesInput" class="notes-input" maxlength="4000" placeholder="Write notes here..."></textarea>
+      <div class="notes-actions">
+        <span id="notesSavedState" class="settings-path">Saved locally.</span>
+        <button class="tool-btn small" id="clearNotesBtn" type="button">Clear Notes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Presets view ─────────────────────────────────────── -->
+<div id="presetsView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="presetsBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Quick Presets</span>
+  </div>
+
+  <div class="settings-body">
+
+    <div class="settings-group">
+      <div class="settings-group-label">Add Preset</div>
+      <div class="file-zone" id="presetDropZone">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span class="file-zone-name">Drop .ffx files here</span>
+        <span class="file-zone-hint">or click to browse - multiple ok</span>
+        <input type="file" id="presetFileInput" accept=".ffx" multiple style="display:none">
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Saved</div>
+      <div id="presetsList"></div>
+      <div class="settings-path" id="presetsEmpty">No presets saved yet.</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── Settings view ────────────────────────────────────── -->
+<div id="settingsView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="settingsBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Settings</span>
+  </div>
+
+  <div class="settings-body">
+
+    <div class="settings-group">
+      <div class="settings-group-label">Your Name</div>
+      <div class="label-row">
+        <span class="label-row-text">Name</span>
+        <input type="text" id="userNameInput" aria-label="Your name" class="settings-text-input" maxlength="24" placeholder="optional" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Colour Theme</div>
+      <div class="theme-swatches">
+        <button class="theme-swatch" data-theme="amber" style="--swatch:#c09050" title="Amber"></button>
+        <button class="theme-swatch" data-theme="blue"  style="--swatch:#5090c0" title="Blue"></button>
+        <button class="theme-swatch" data-theme="green" style="--swatch:#6aab7a" title="Green"></button>
+        <button class="theme-swatch" data-theme="red"   style="--swatch:#c05060" title="Red"></button>
+        <button class="theme-swatch theme-swatch-custom" data-theme="custom" style="--swatch:#c09050" title="Custom colour"></button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Font</div>
+      <div class="label-row">
+        <span class="label-row-text">Font</span>
+        <select class="settings-select" id="fontSelect" aria-label="Panel font">
+          <option value="system">System</option>
+          <option value="helvetica">Helvetica</option>
+          <option value="rounded">Rounded</option>
+          <option value="dyslexia">Dyslexia Friendly</option>
+          <option value="inter">Inter</option>
+          <option value="mono">Mono</option>
+          <option value="serif">Serif</option>
+          <option value="georgia">Georgia</option>
+        </select>
+        <label class="tool-btn small settings-file-btn">Upload Font<input type="file" id="customFontInput" accept=".ttf,.otf,.woff,.woff2" style="display:none"></label>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Look</span>
+        <select class="settings-select" id="uiLookSelect" aria-label="Panel look">
+          <option value="classic">Classic</option>
+          <option value="soft">Soft</option>
+          <option value="compact">Compact</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Mode</span>
+        <select class="settings-select" id="interfaceModeSelect" aria-label="Interface mode">
+          <option value="full">Full</option>
+          <option value="simple">Simple</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Background</span>
+        <select class="settings-select" id="backgroundSelect" aria-label="Panel background">
+          <option value="none">None</option>
+          <option value="grid">Grid</option>
+          <option value="aurora">Aurora</option>
+          <option value="noise">Noise</option>
+          <option value="custom">Custom Image</option>
+        </select>
+      </div>
+      <div class="background-actions" id="backgroundActions" aria-live="polite">
+        <button class="tool-btn small" id="pickBackgroundImage" type="button">Choose Image</button>
+        <button class="tool-btn small" id="clearBackgroundImage" type="button">Clear Image</button>
+        <input type="file" id="backgroundImageInput" accept="image/*" style="display:none">
+      </div>
+      <div class="profile-upload-card">
+        <span class="profile-upload-preview" id="profileUploadPreview" aria-hidden="true"></span>
+        <label class="tool-btn small settings-file-btn">Upload Profile Picture<input type="file" id="profileImageInput" accept="image/*" style="display:none"></label>
+        <button class="tool-btn small" id="clearProfileImage">Clear</button>
+      </div>
+      <div class="settings-path" style="margin-top:4px">Simple mode keeps advanced inputs tucked away.</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Frame Blending Mode</div>
+      <div class="radio-row">
+        <label class="radio-label"><input type="radio" name="fbMode" value="mix"> Frame Mix</label>
+        <label class="radio-label"><input type="radio" name="fbMode" value="pixel" checked> Pixel Motion</label>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Layer Labels</div>
+      <div class="label-row">
+        <span class="label-row-text">Footage</span>
+        <select class="label-select" id="labelFootage">
+          <option value="0">None</option><option value="1">Red</option><option value="2">Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8" selected>Blue</option>
+          <option value="9">Green</option><option value="10">Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Text</span>
+        <select class="label-select" id="labelText">
+          <option value="0">None</option><option value="1">Red</option><option value="2" selected>Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8">Blue</option>
+          <option value="9">Green</option><option value="10">Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+      <div class="label-row">
+        <span class="label-row-text">Effects</span>
+        <select class="label-select" id="labelEffects">
+          <option value="0">None</option><option value="1">Red</option><option value="2">Yellow</option>
+          <option value="3">Aqua</option><option value="4">Pink</option><option value="5">Lavender</option>
+          <option value="6">Peach</option><option value="7">Sea Foam</option><option value="8">Blue</option>
+          <option value="9">Green</option><option value="10" selected>Purple</option><option value="11">Orange</option>
+          <option value="12">Brown</option><option value="13">Fuchsia</option><option value="14">Cyan</option>
+          <option value="15">Sandstone</option><option value="16">Dark Green</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Loaded Preset</div>
+      <div class="settings-path" id="settingsPath">None loaded</div>
+      <button class="tool-btn small" id="settingsClearPreset">Clear</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Favorites</div>
+      <div class="settings-path">Click the star on any tool, then use the header star to filter.</div>
+      <button class="tool-btn small" id="clearFavorites">Clear Favorites</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Setup</div>
+      <button class="tool-btn small" id="rerunOnboarding">Run First-Launch Setup Again</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Flow Graph Transfer</div>
+      <div class="settings-path">Import graphs from aescripts Flow or JerryFlow if installed.</div>
+      <button class="tool-btn small" id="btnTransferFlowGraphs">Transfer Graphs from Flow</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Graph Library</div>
+      <div class="input-row">
+        <label>Icon size</label>
+        <input type="range" id="graphIconSize" class="range-input" min="48" max="140" value="74">
+        <span class="range-val" id="graphIconSizeVal">74</span>
+      </div>
+      <button class="tool-btn small" id="btnSettingsAddGraphMenu">New Graph Menu</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Panel Sections</div>
+      <div class="section-vis-list">
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="project"    checked> Project Files</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="layers"     checked> Layers</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="animation"  checked> Animation</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="fx"         checked> FX</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="colour"     checked> Colour</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="keyframes"  checked> Keyframes</label>
+        <label class="checkbox-label"><input type="checkbox" class="section-vis-cb" data-section="easing"     checked> Easing</label>
+      </div>
+      <button class="advanced-toggle" id="advVisToggle"><span class="chev">›</span> Advanced</button>
+      <div class="advanced-panel" id="advVisPanel">
+        <div class="adv-section">
+          <div class="adv-section-label">Project Files</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="project.import" checked> Web/Local Import</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="project.weburl" checked> URL Field</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="project.systemsearch" checked> System Search</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">Layers</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.precompose"   checked> Precompose</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.frameblend"   checked> Frame Blend</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.motionblur"   checked> Motion Blur</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.trimcomp"     checked> Trim Comp</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.autolabel"    checked> Auto-Label</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.centeranchor" checked> Center Anchor</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.null"         checked> Null from Sel.</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.sequence"     checked> Sequence</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="layers.rename"       checked> Rename</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">Animation</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="animation.wordanimate"   checked> Word Animate</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="animation.beatdetect"    checked> Beat Detect</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="animation.snaptomarkers" checked> Snap to Markers</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">FX</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="fx.echotrail"    checked> Echo Trail</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="fx.loopduplicate" checked> Loop Duplicate</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">Colour</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="colour.ffxpreset" checked> FFX Preset</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">Keyframes</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="keyframes.fitkeys"     checked> Fit to Clip</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="keyframes.reversekeys" checked> Reverse Keys</label>
+          </div>
+        </div>
+        <div class="adv-section">
+          <div class="adv-section-label">Easing</div>
+          <div class="adv-items">
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="easing.graph"    checked> Graph</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="easing.presets"  checked> Presets</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="easing.apply"    checked> Apply/Save</label>
+            <label class="checkbox-label"><input type="checkbox" class="item-vis-cb" data-item="easing.library"  checked> Saved Curves</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Updates</div>
+      <div class="settings-path" id="updateHealth">Current version ready.</div>
+      <label class="checkbox-label"><input type="checkbox" id="checkAlphaReleases"> Include alpha releases</label>
+      <button class="tool-btn small" id="btnCheckUpdate">Check for Updates</button>
+      <button class="tool-btn small" id="btnForceTerminalUpdate">Open Installer App</button>
+      <button class="tool-btn small" id="btnOpenReleasePage">Download Installer</button>
+      <button class="tool-btn small" id="btnHideUpdateWeek">Hide Updates for 7 Days</button>
+      <button class="tool-btn small" id="btnResetUpdateNotices">Reset Hidden Notices</button>
+    </div>
+
+    <div class="settings-footer">
+      <span class="version-tag" id="settingsVersion"></span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── Developer view ───────────────────────────────────── -->
+<div id="devView" class="settings-view">
+
+  <div class="settings-hd">
+    <button class="icon-btn" id="devBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <span class="settings-title">Developer</span>
+  </div>
+
+  <div class="settings-body">
+
+    <div class="settings-group">
+      <div class="settings-group-label">Session</div>
+      <button class="tool-btn small" id="devPauseTimer">Pause Editing Timer</button>
+      <div class="dev-stats">
+        <div class="dev-stat">
+          <span class="dev-stat-label">Actions run</span>
+          <span class="dev-stat-val" id="devActionCount">0</span>
+        </div>
+        <div class="dev-stat">
+          <span class="dev-stat-label">Session start</span>
+          <span class="dev-stat-val" id="devSessionStart">-</span>
+        </div>
+        <div class="dev-stat">
+          <span class="dev-stat-label">Version</span>
+          <span class="dev-stat-val" id="devVersion">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Action Log (last 30)</div>
+      <div class="dev-log" id="devLog"></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Storage (jx_*)</div>
+      <div class="dev-dump" id="devDump"></div>
+      <div class="dev-tool-grid" style="margin-top:8px">
+        <button class="tool-btn small" id="devRefreshDiagnostics">Refresh Diagnostics</button>
+        <button class="tool-btn small" id="devCopyDiagnostics">Copy Diagnostics</button>
+        <button class="tool-btn small" id="devDownloadDiagnostics">Export Diagnostics</button>
+        <button class="tool-btn small" id="devOpenExtensionNormal">Reveal Extension Folder</button>
+        <button class="tool-btn small" id="devClearActionLog">Clear Action Log</button>
+        <button class="tool-btn small" id="devClearStorage">Clear All jx_* Keys</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Diagnostics</div>
+      <div class="dev-dump" id="devDiagnostics"></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Normal Dev Utilities</div>
+      <div class="dev-tool-grid">
+        <button class="tool-btn small" id="devCopyVersion">Copy Version Info</button>
+        <button class="tool-btn small" id="devCopyUpdateInfo">Copy Update Info</button>
+        <button class="tool-btn small" id="devExportActions">Export Action Log</button>
+        <button class="tool-btn small" id="devExportStorageKeys">Export Storage Keys</button>
+        <button class="tool-btn small" id="devCountTools">Count Visible Tools</button>
+        <button class="tool-btn small" id="devPingHost">Ping JSX Host</button>
+        <button class="tool-btn small" id="devCopyGraphData">Copy Graph Data</button>
+        <button class="tool-btn small" id="devCopySectionData">Copy Section Data</button>
+        <button class="tool-btn small" id="devToggleAllSections">Open All Sections</button>
+        <button class="tool-btn small" id="devCollapseAllSections">Close All Sections</button>
+        <button class="tool-btn small" id="devMeasurePanel">Measure Panel</button>
+        <button class="tool-btn small" id="devCopyLastError">Copy Last Error</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-label">Owner Unlock</div>
+      <div class="settings-path" id="ownerUnlockStatus">Locked</div>
+      <input type="password" id="ownerPasswordInput" class="settings-text-input" placeholder="Owner password" autocomplete="off" spellcheck="false">
+      <div class="btn-row" style="margin-top:7px">
+        <button class="tool-btn small" id="ownerUnlockBtn">Unlock</button>
+        <button class="tool-btn small" id="ownerLockBtn">Lock</button>
+      </div>
+    </div>
+
+    <div class="settings-group owner-only locked">
+      <div class="settings-group-label">Owner Tools</div>
+      <div class="dev-tool-grid">
+        <button class="tool-btn small" id="devExportState">Export Full State</button>
+        <button class="tool-btn small" id="devCopyState">Copy Full State</button>
+        <button class="tool-btn small" id="devOpenExtension">Reveal Extension Folder</button>
+        <button class="tool-btn small" id="devOpenPasswordFile">Open Password File</button>
+        <button class="tool-btn small" id="devForceUpdateCheck">Force Update Check</button>
+        <button class="tool-btn small" id="devRunSmokeTest">Run UI Smoke Test</button>
+        <button class="tool-btn small" id="devDeepSmokeTest">Deep Smoke Test</button>
+        <button class="tool-btn small" id="devBackupSettings">Backup Settings</button>
+        <button class="tool-btn small" id="devRestoreSettings">Restore Settings</button>
+        <button class="tool-btn small" id="devExportHtmlDump">Export HTML Dump</button>
+        <button class="tool-btn small" id="devExportCssVars">Export CSS Vars</button>
+        <button class="tool-btn small" id="devExportManifest">Export Manifest Copy</button>
+        <button class="tool-btn small" id="devOpenBackupFile">Open Settings Backup</button>
+        <button class="tool-btn small" id="devValidateStorage">Validate Storage JSON</button>
+        <button class="tool-btn small" id="devPruneBadStorage">Prune Bad Storage JSON</button>
+        <button class="tool-btn small" id="devResetGraphs">Reset Graph Library</button>
+        <button class="tool-btn small" id="devResetOnboarding">Reset Onboarding</button>
+        <button class="tool-btn small" id="devResetLayout">Reset Panel Layout</button>
+        <button class="tool-btn small danger" id="devFactoryReset">Factory Reset jx Storage</button>
+        <button class="tool-btn small danger" id="devClearOwner">Clear Owner Unlock</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── Save curve modal ──────────────────────────────────── -->
+<div id="saveModal" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-title">Save Curve</div>
+    <input type="text" id="saveInput" class="modal-input" placeholder="Name it..." maxlength="40" autocomplete="off" spellcheck="false">
+    <div class="modal-actions">
+      <button class="tool-btn small" id="saveCancel">Cancel</button>
+      <button class="tool-btn small accent" id="saveConfirm">Save</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ── Profile crop modal ──────────────────────────────────── -->
+<div id="profileCropModal" class="modal-bg hidden">
+  <div class="modal profile-crop-modal">
+    <div class="modal-title">Crop Profile Picture</div>
+    <div class="profile-crop-stage" id="profileCropStage">
+      <canvas id="profileCropCanvas" width="220" height="220"></canvas>
+      <div class="profile-crop-ring"></div>
+    </div>
+    <div class="input-row profile-crop-zoom">
+      <label>Zoom</label>
+      <input type="range" id="profileCropZoom" class="range-input" min="1" max="3" value="1" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <button class="tool-btn small" id="profileCropCancel">Cancel</button>
+      <button class="tool-btn small accent" id="profileCropApply">Use Picture</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast out"></div>
+
+
+<script src="js/CSInterface.js"></script>
+<script src="js/version.js"></script>
+<script src="js/persistent-storage.js"></script>
+<script src="js/updater.js"></script>
+<script src="js/profile/profile-image.js"></script>
+<script src="js/profile/profile-cropper.js"></script>
+<script src="js/ui/ui-debug.js"></script>
+<script src="js/curve-ai/curve-ai-data.js"></script>
+<script src="js/curve-ai/weights/weights-manifest.js"></script>
+<script src="js/curve-ai/weights/weights-a.js"></script>
+<script src="js/curve-ai/weights/weights-b.js"></script>
+<script src="js/curve-ai/weights/weights-c.js"></script>
+<script src="js/curve-ai/weights/weights-d.js"></script>
+<script src="js/curve-ai/weights/weights-e.js"></script>
+<script src="js/curve-ai/weights/weights-f.js"></script>
+<script src="js/curve-ai/weights/weights-g.js"></script>
+<script src="js/curve-ai/weights/weights-h.js"></script>
+<script src="js/curve-ai/weights/weights-i.js"></script>
+<script src="js/curve-ai/weights/weights-j.js"></script>
+<script src="js/curve-ai/weights/weights-k.js"></script>
+<script src="js/curve-ai/weights/weights-l.js"></script>
+<script src="js/curve-ai/weights/weights-m.js"></script>
+<script src="js/curve-ai/weights/weights-n.js"></script>
+<script src="js/curve-ai/weights/weights-o.js"></script>
+<script src="js/curve-ai/weights/weights-p.js"></script>
+<script src="js/curve-ai/weights/weights-q.js"></script>
+<script src="js/curve-ai/weights/weights-r.js"></script>
+<script src="js/curve-ai/weights/weights-s.js"></script>
+<script src="js/curve-ai/weights/weights-t.js"></script>
+<script src="js/curve-ai/weights/weights-u.js"></script>
+<script src="js/curve-ai/weights/weights-v.js"></script>
+<script src="js/curve-ai/weights/weights-w.js"></script>
+<script src="js/curve-ai/weights/weights-z.js"></script>
+<script src="js/curve-ai/curve-ai-model.js"></script>
+<script src="js/curve-ai/curve-ai-presets.js"></script>
+<script src="js/graph-editor.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+.icon-btn {
+    border-radius: 10px;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+.icon-btn:hover {
+    background: rgba(255,255,255,0.045);
+    transform: translateY(-1px);
+}
+.range-input::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--accent-soft), 0 0 12px var(--accent-mid);
+}
+.settings-select,
+.modal-input,
+.text-input-sm,
+.num-input {
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.006)), var(--surface);
+}
+.checkbox-label input,
+.radio-label input {
+    accent-color: var(--accent);
+}

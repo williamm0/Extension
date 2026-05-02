@@ -1,0 +1,9 @@
+v2 alpha next checks
+
+- Load the panel inside After Effects and confirm CEP host APIs import media correctly.
+- Test Grid, Aurora, Noise, and Custom Image backgrounds inside After Effects and browser preview.
+- Enable each automation rule one by one and confirm each host action behaves correctly.
+- Test Notes persistence after closing and reopening the panel.
+- Test curve description prompts with real editing phrases and tune weights if needed.
+- Test profile upload and crop with PNG, JPG, and larger images.
+- Package a fresh alpha build after AE smoke testing.

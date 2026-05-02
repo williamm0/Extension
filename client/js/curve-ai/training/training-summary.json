@@ -1,0 +1,36 @@
+{
+  "version": "2.0.1-alpha",
+  "sampleCount": 43240,
+  "featureCount": 243,
+  "outputs": [
+    "h1.x",
+    "h1.y",
+    "h2.x",
+    "h2.y"
+  ],
+  "families": [
+    "snap",
+    "bounce",
+    "float",
+    "cinematic",
+    "jitter",
+    "luxury",
+    "scary",
+    "sad",
+    "robot",
+    "anticipate",
+    "smooth",
+    "fast",
+    "slow",
+    "overshoot",
+    "settle",
+    "zoom_in",
+    "zoom_out",
+    "slam_in",
+    "slam_out",
+    "mid_deep",
+    "fast_slow",
+    "slow_fast"
+  ],
+  "simplePhraseCount": 74
+}
