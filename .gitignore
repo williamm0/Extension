@@ -1,2 +1,4 @@
 .DS_Store
 Archive.zip
+client/js/curve-ai/training/* 2.json
+client/js/curve-ai/weights/* 3.js

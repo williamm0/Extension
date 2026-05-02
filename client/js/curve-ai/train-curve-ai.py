@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, random
+import json, random, shutil, zipfile
 root = Path(__file__).resolve().parent
 (root/'training').mkdir(parents=True, exist_ok=True)
 (root/'weights').mkdir(parents=True, exist_ok=True)
@@ -135,6 +135,7 @@ metadata={'version':'2.0.1-alpha','sampleCount':len(samples),'featureCount':len(
 # Clean previous generated shards.
 for path in (root/'training').glob('shard-*.json'): path.unlink()
 for path in (root/'weights').glob('weights-*.js'): path.unlink()
+(root/'training.zip').unlink(missing_ok=True)
 (root/'training'/'synthetic-corpus.json').write_text(json.dumps(samples,separators=(',',':')))
 (root/'training'/'training-summary.json').write_text(json.dumps(metadata,indent=2))
 shard_size=10
@@ -151,4 +152,8 @@ for letter,obj in by_letter.items():
     (root/'weights'/f'weights-{letter}.js').write_text('JX_CURVE_AI_WEIGHT_SHARDS.push('+json.dumps(obj,separators=(',',':'))+');\n')
 (root/'weights'/'weights-manifest.js').write_text('var JX_CURVE_AI_WEIGHT_SHARDS = [];\nvar JX_CURVE_AI_MODEL_META = '+json.dumps(metadata,separators=(',',':'))+';\n')
 (root/'training'/'manifest.json').write_text(json.dumps({'shards':shards,**metadata},indent=2))
+with zipfile.ZipFile(root/'training.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    for path in sorted(train.iterdir()):
+        if path.is_file():
+            archive.write(path, arcname=path.name)
 print(json.dumps(metadata,indent=2))
