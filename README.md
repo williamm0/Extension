@@ -114,14 +114,6 @@ The Notes tab stores local edit notes, timestamps, reminders, and ideas directly
 MacOS and Windows installer:
 https://github.com/williamm0/Extension/releases/tag/INSTALLER
 
-macOS command install note:
-
-1. Open Terminal.
-2. Type chmod +x followed by a space.
-3. Drag install.command into Terminal.
-4. Press Enter.
-5. Double-click the command file to run it.
-
 ## Tested
 
 Tested on After Effects 2026, Windows 11, and macOS Tahoe 26.4.1.
