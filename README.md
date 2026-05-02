@@ -114,6 +114,8 @@ The Notes tab stores local edit notes, timestamps, reminders, and ideas directly
 MacOS and Windows installer:
 https://github.com/williamm0/Extension/releases/tag/INSTALLER
 
+https://github.com/user-attachments/assets/432cbb9b-9545-4391-a673-3b1ceed607b5
+
 ## Tested
 
 Tested on After Effects 2026, Windows 11, and macOS Tahoe 26.4.1.
