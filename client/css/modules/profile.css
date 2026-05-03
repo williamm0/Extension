@@ -1,0 +1,21 @@
+.profile-avatar.has-image,
+.login-avatar.has-image {
+    border-color: rgba(255,255,255,0.16);
+    color: transparent;
+}
+.profile-upload-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 7px;
+}
+.profile-upload-preview {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    border: 1px solid var(--accent-mid);
+    background: var(--accent-soft);
+    box-shadow: 0 0 16px rgba(192, 80, 96, 0.07);
+    background-size: cover;
+    background-position: center;
+}

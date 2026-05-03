@@ -1,0 +1,99 @@
+#backgroundLayer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: var(--bg);
+    background-size: cover;
+    background-position: center;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+    z-index: 0;
+}
+body.has-background #backgroundLayer {
+    opacity: 1;
+}
+body.bg-grid #backgroundLayer {
+    background-color: #0d0d0d;
+    background-image: linear-gradient(rgba(255,255,255,0.075) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.075) 1px, transparent 1px);
+    background-size: 18px 18px;
+}
+body.bg-aurora #backgroundLayer {
+    background: radial-gradient(circle at 14% 10%, var(--accent-mid), transparent 30%), radial-gradient(circle at 88% 0%, rgba(255,255,255,0.12), transparent 32%), linear-gradient(180deg, #101010, #080808);
+}
+body.bg-noise #backgroundLayer {
+    background-color: #0d0d0d;
+    background-image: repeating-radial-gradient(circle at 22% 24%, rgba(255,255,255,0.12) 0 1px, transparent 1px 4px);
+    opacity: 0.42;
+}
+body.bg-custom #backgroundLayer {
+    background-image: linear-gradient(rgba(13,13,13,0.18), rgba(13,13,13,0.42)), var(--custom-bg-image);
+    filter: saturate(0.96) brightness(0.92);
+}
+body.has-background #app,
+body.has-background .settings-view,
+body.has-background .onboarding-view {
+    background: transparent;
+}
+body.has-background header,
+body.has-background footer,
+body.has-background .search-bar,
+body.has-background .section-body,
+body.has-background .settings-group,
+body.has-background .tool-btn,
+body.has-background .file-zone {
+    background-color: rgba(13,13,13,0.72);
+    backdrop-filter: blur(10px);
+}
+body.has-background .settings-view {
+    backdrop-filter: blur(8px);
+}
+header,
+footer {
+    background: rgba(13,13,13,0.92);
+}
+section {
+    background: rgba(13,13,13,0.34);
+}
+.tool-btn {
+    border-radius: 3px;
+}
+.section-hd {
+    padding-top: 8px;
+    padding-bottom: 5px;
+}
+.section-body {
+    padding-top: 5px;
+}
+.notes-body {
+    grid-template-rows: auto 1fr;
+}
+.notes-hero {
+    background: linear-gradient(135deg, var(--accent-soft), rgba(255,255,255,0.012));
+}
+.notes-input {
+    width: 100%;
+    min-height: 260px;
+    resize: vertical;
+    color: var(--text);
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px;
+    font: inherit;
+    line-height: 1.45;
+    outline: none;
+}
+.notes-input:focus {
+    border-color: var(--accent-mid);
+    box-shadow: var(--focus-ring);
+}
+.notes-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+}
+.automation-row {
+    border-radius: 5px;
+}

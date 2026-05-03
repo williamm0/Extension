@@ -1,0 +1,61 @@
+var JX_CURVE_AI_DATA = (function () {
+    return {
+        version: '2.0.1-alpha',
+        emotions: {
+            angry:     { energy: 0.92, tension: 0.90, weight: 0.62, bounce: 0.18, overshoot: 0.32, chaos: 0.24 },
+            anxious:   { energy: 0.82, tension: 0.86, weight: 0.38, bounce: 0.08, overshoot: 0.18, chaos: 0.76 },
+            calm:      { energy: 0.20, tension: 0.12, weight: 0.22, bounce: 0.02, overshoot: 0.00, chaos: 0.00 },
+            dreamy:    { energy: 0.24, tension: 0.10, weight: 0.18, bounce: 0.08, overshoot: 0.08, chaos: 0.02 },
+            excited:   { energy: 0.88, tension: 0.34, weight: 0.28, bounce: 0.72, overshoot: 0.36, chaos: 0.10 },
+            happy:     { energy: 0.68, tension: 0.22, weight: 0.24, bounce: 0.62, overshoot: 0.22, chaos: 0.04 },
+            sad:       { energy: 0.18, tension: 0.28, weight: 0.72, bounce: 0.00, overshoot: 0.00, chaos: 0.04 },
+            scary:     { energy: 0.58, tension: 0.94, weight: 0.58, bounce: 0.03, overshoot: 0.24, chaos: 0.52 },
+            elegant:   { energy: 0.34, tension: 0.16, weight: 0.34, bounce: 0.02, overshoot: 0.05, chaos: 0.00 },
+            playful:   { energy: 0.74, tension: 0.24, weight: 0.18, bounce: 0.80, overshoot: 0.38, chaos: 0.08 },
+            cinematic: { energy: 0.36, tension: 0.24, weight: 0.84, bounce: 0.00, overshoot: 0.04, chaos: 0.00 },
+            zoom_in: { energy: 0.78, tension: 0.42, weight: 0.44, bounce: 0.16, overshoot: 0.18, chaos: 0.04, anticipation: 0.12 },
+            zoom_out: { energy: 0.36, tension: 0.18, weight: 0.62, bounce: 0.02, overshoot: 0.03, chaos: 0.00, anticipation: 0.04 },
+            slam_in: { energy: 0.98, tension: 0.94, weight: 0.72, bounce: 0.08, overshoot: 0.28, chaos: 0.16, anticipation: 0.18 },
+            slam_out: { energy: 0.92, tension: 0.88, weight: 0.70, bounce: 0.04, overshoot: 0.18, chaos: 0.12, anticipation: 0.05 },
+            mid_deep: { energy: 0.46, tension: 0.30, weight: 0.62, bounce: 0.04, overshoot: 0.08, chaos: 0.00, anticipation: 0.04 },
+            fast_slow: { energy: 0.62, tension: 0.34, weight: 0.44, bounce: 0.05, overshoot: 0.10, chaos: 0.02, anticipation: 0.08 },
+            slow_fast: { energy: 0.58, tension: 0.30, weight: 0.42, bounce: 0.04, overshoot: 0.10, chaos: 0.02, anticipation: 0.10 },
+            luxury:    { energy: 0.28, tension: 0.08, weight: 0.42, bounce: 0.00, overshoot: 0.02, chaos: 0.00 }
+        },
+        tokens: {
+            snap: 'angry', punch: 'angry', hit: 'angry', impact: 'angry', attack: 'angry', aggressive: 'angry',
+            nervous: 'anxious', jitter: 'anxious', jittery: 'anxious', shaky: 'anxious', panic: 'anxious', uneasy: 'anxious',
+            soft: 'calm', gentle: 'calm', smooth: 'calm', peaceful: 'calm', chill: 'calm', relaxed: 'calm',
+            dream: 'dreamy', float: 'dreamy', floating: 'dreamy', airy: 'dreamy', ghost: 'dreamy', underwater: 'dreamy',
+            hype: 'excited', energetic: 'excited', fast: 'excited', quick: 'excited', speed: 'excited',
+            fun: 'happy', cute: 'happy', bright: 'happy', cheerful: 'happy',
+            heavy: 'cinematic', slow: 'cinematic', weight: 'cinematic', gravity: 'cinematic', massive: 'cinematic',
+            zoomin: 'zoom_in', 'zoom-in': 'zoom_in', pushin: 'zoom_in', 'push-in': 'zoom_in', closer: 'zoom_in', punchin: 'zoom_in',
+            zoomout: 'zoom_out', 'zoom-out': 'zoom_out', pullout: 'zoom_out', 'pull-out': 'zoom_out', wider: 'zoom_out', reveal: 'zoom_out',
+            slamin: 'slam_in', 'slam-in': 'slam_in', smashin: 'slam_in', crashin: 'slam_in', bangin: 'slam_in',
+            slamout: 'slam_out', 'slam-out': 'slam_out', smashout: 'slam_out', crashout: 'slam_out', hardout: 'slam_out',
+            middeep: 'mid_deep', 'mid-deep': 'mid_deep', mediumdeep: 'mid_deep', deepish: 'mid_deep', controlled: 'mid_deep',
+            fastslow: 'fast_slow', 'fast-slow': 'fast_slow', speedramp: 'fast_slow', quickslow: 'fast_slow',
+            slowfast: 'slow_fast', 'slow-fast': 'slow_fast', rampup: 'slow_fast', accelerate: 'slow_fast',
+            horror: 'scary', creepy: 'scary', fear: 'scary', dark: 'scary', glitch: 'scary', chaotic: 'scary',
+            premium: 'luxury', expensive: 'luxury', clean: 'luxury', minimal: 'luxury',
+            elastic: 'playful', bounce: 'playful', bouncy: 'playful', rubber: 'playful', spring: 'playful', overshoot: 'playful',
+            elegant: 'elegant', graceful: 'elegant', silk: 'elegant', silky: 'elegant', fluid: 'elegant'
+        },
+        phrases: [
+            { match: ['wind up', 'anticipation', 'pull back'], delta: { anticipation: 0.42, overshoot: 0.12, tension: 0.12 } },
+            { match: ['no overshoot', 'without overshoot'], delta: { overshoot: -0.60, bounce: -0.35 } },
+            { match: ['hard stop', 'dead stop'], delta: { tension: 0.34, energy: 0.20, overshoot: -0.30 } },
+            { match: ['settle in', 'soft landing'], delta: { tension: -0.22, weight: 0.12, overshoot: -0.18 } },
+            { match: ['music video', 'edit style'], delta: { energy: 0.16, overshoot: 0.12, bounce: 0.08 } },
+            { match: ['camera move', 'camera pan'], delta: { weight: 0.18, tension: -0.12, chaos: -0.20 } },
+            { match: ['zoom in', 'push in', 'punch in'], delta: { energy: 0.32, tension: 0.16, overshoot: 0.08 } },
+            { match: ['zoom out', 'pull out', 'pull away'], delta: { energy: -0.08, weight: 0.18, tension: -0.08 } },
+            { match: ['slam in', 'smash in', 'crash in'], delta: { energy: 0.44, tension: 0.32, weight: 0.22, overshoot: 0.16 } },
+            { match: ['slam out', 'smash out', 'crash out'], delta: { energy: 0.36, tension: 0.30, weight: 0.20 } },
+            { match: ['mid deep', 'medium deep'], delta: { weight: 0.20, tension: 0.08, energy: 0.06 } },
+            { match: ['fast slow', 'speed ramp'], delta: { energy: 0.14, weight: 0.08, anticipation: 0.06 } },
+            { match: ['slow fast', 'ramp up'], delta: { energy: 0.12, anticipation: 0.12 } }
+        ]
+    };
+})();

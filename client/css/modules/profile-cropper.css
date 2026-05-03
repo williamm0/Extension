@@ -1,0 +1,38 @@
+.profile-crop-modal {
+    width: 290px;
+}
+.profile-crop-stage {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 8px auto 12px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border-hi);
+    background: #080808;
+    box-shadow: 0 0 22px rgba(192,80,96,0.12);
+    cursor: grab;
+}
+.profile-crop-stage:active {
+    cursor: grabbing;
+}
+#profileCropCanvas {
+    display: block;
+    width: 220px;
+    height: 220px;
+}
+.profile-crop-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 172px;
+    height: 172px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.58);
+    box-shadow: 0 0 0 999px rgba(0,0,0,0.20), 0 0 20px var(--accent-soft);
+    pointer-events: none;
+}
+.profile-crop-zoom {
+    margin-bottom: 12px;
+}

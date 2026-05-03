@@ -1,0 +1,12 @@
+{
+  "name": "jxtools-extension",
+  "version": "2.0.1",
+  "productName": "jx Tools",
+  "description": "jx Tools After Effects extension and release packaging",
+  "private": true,
+  "scripts": {
+    "pack:mac": "node scripts/pack-mac.mjs",
+    "pack:win": "node scripts/pack-win.mjs",
+    "pack": "npm run pack:mac && npm run pack:win"
+  }
+}

@@ -1,0 +1,2980 @@
+var cs = new CSInterface();
+
+var loadedPresetPath = localStorage.getItem('jx_preset') || null;
+var PROJECT_MEDIA_TYPES = { image: /\.(png|jpe?g|gif|webp|bmp|tiff?|svg)$/i, video: /\.(mp4|mov|m4v|avi|mkv|webm)$/i, audio: /\.(mp3|wav|aif|aiff|m4a|aac|flac|ogg)$/i };
+var AUTOMATION_KEY = 'jx_automations_v2';
+var NOTES_KEY = 'jx_project_notes_v2';
+var quickPresets     = JSON.parse(localStorage.getItem('jx_quick_presets') || '[]');
+var SECTION_KEYS      = ['project', 'layers', 'animation', 'fx', 'colour', 'keyframes', 'easing'];
+var SECTION_LABELS    = { project: 'Project Files', layers: 'Layers', animation: 'Animation', fx: 'FX', colour: 'Colour', keyframes: 'Keyframes', easing: 'Easing' };
+var HAS_CEP_BRIDGE = typeof window !== 'undefined' && !!window.__adobe_cep__;
+
+// ── theme ──────────────────────────────────────────────────────────────────────
+
+var THEMES = {
+    amber: { accent: '#c09050', soft: 'rgba(192,144,80,0.10)',  mid: 'rgba(192,144,80,0.28)'  },
+    blue:  { accent: '#5090c0', soft: 'rgba(80,144,192,0.10)',  mid: 'rgba(80,144,192,0.28)'  },
+    green: { accent: '#6aab7a', soft: 'rgba(106,171,122,0.10)', mid: 'rgba(106,171,122,0.28)' },
+    red:   { accent: '#c05060', soft: 'rgba(192,80,96,0.10)',   mid: 'rgba(192,80,96,0.28)'   }
+};
+
+function hexToRgb(hex) {
+    var h = normalizeHex(hex).replace('#', '');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    return {
+        r: parseInt(h.substr(0,2),16),
+        g: parseInt(h.substr(2,2),16),
+        b: parseInt(h.substr(4,2),16)
+    };
+}
+
+function normalizeHex(hex) {
+    hex = (hex || '').toString().replace(/[^0-9a-f]/gi, '');
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    if (hex.length !== 6) hex = 'c09050';
+    return '#' + hex.toLowerCase();
+}
+
+function openCustomThemePicker() {
+    var current = normalizeHex(localStorage.getItem('jx_theme_custom') || '#c09050');
+    cs.evalScript("jx_pickThemeColor('" + current + "')", function (result) {
+        var res = parseResult(result);
+        if (!res || !res.success || !res.hex) return;
+        localStorage.setItem('jx_theme_custom', normalizeHex(res.hex));
+        applyTheme('custom');
+    });
+}
+
+function customThemeFromHex(hex) {
+    var c = hexToRgb(hex);
+    return {
+        accent: hex,
+        soft: 'rgba('+c.r+','+c.g+','+c.b+',0.10)',
+        mid:  'rgba('+c.r+','+c.g+','+c.b+',0.28)'
+    };
+}
+
+function applyTheme(name) {
+    var t;
+    if (name === 'custom') {
+        var hex = normalizeHex(localStorage.getItem('jx_theme_custom') || '#c09050');
+        t = customThemeFromHex(hex);
+        var sw = document.querySelector('.theme-swatch[data-theme="custom"]');
+        if (sw) sw.style.setProperty('--swatch', hex);
+    } else {
+        t = THEMES[name] || THEMES.amber;
+    }
+    var root = document.documentElement;
+    root.style.setProperty('--accent',      t.accent);
+    root.style.setProperty('--accent-soft', t.soft);
+    root.style.setProperty('--accent-mid',  t.mid);
+    localStorage.setItem('jx_theme', name);
+    document.querySelectorAll('.theme-swatch').forEach(function (el) {
+        el.classList.toggle('active', el.dataset.theme === name);
+    });
+    graphEditor.redraw();
+}
+
+var UI_LOOKS = {
+    classic: { label: 'Classic', radius: '2px', density: '0px', glow: '0' },
+    soft:    { label: 'Soft',    radius: '7px', density: '1px', glow: '1' },
+    compact: { label: 'Compact', radius: '1px', density: '-2px', glow: '0' }
+};
+
+function applyUiLook(name) {
+    var look = UI_LOOKS[name] ? name : 'classic';
+    var t = UI_LOOKS[look];
+    var root = document.documentElement;
+    root.style.setProperty('--r', t.radius);
+    root.style.setProperty('--ui-density', t.density);
+    root.style.setProperty('--ui-glow', t.glow);
+    localStorage.setItem('jx_ui_look', look);
+    var sel = document.getElementById('uiLookSelect');
+    if (sel) sel.value = look;
+}
+
+// ── font ───────────────────────────────────────────────────────────────────────
+
+var FONTS = {
+    system:    "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+    helvetica: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    rounded:   "'SF Pro Rounded', 'Varela Round', 'Nunito', sans-serif",
+    dyslexia:  "'Atkinson Hyperlegible', 'OpenDyslexic', 'Lexend', 'Verdana', 'Arial', sans-serif",
+    inter:     "'Inter', 'Segoe UI', system-ui, sans-serif",
+    custom:    "var(--custom-font-family), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+    mono:      "'Menlo', 'Consolas', 'Courier New', monospace",
+    serif:     "'Iowan Old Style', 'Palatino', 'Georgia', serif",
+    georgia:   "Georgia, 'Times New Roman', Times, serif"
+};
+
+function applyFont(name) {
+    var stack = FONTS[name] || FONTS.system;
+    document.documentElement.style.setProperty('--font-ui', stack);
+    document.body.classList.toggle('custom-font-active', name === 'custom');
+    localStorage.setItem('jx_font', name);
+    var sel = document.getElementById('fontSelect');
+    if (sel) sel.value = name;
+}
+
+function applyInterfaceMode(mode) {
+    document.body.classList.toggle('simple-mode', mode === 'simple');
+    localStorage.setItem('jx_interface_mode', mode);
+    var sel = document.getElementById('interfaceModeSelect');
+    if (sel) sel.value = mode;
+}
+
+
+function applyBackground(name, customPath) {
+    var mode = name || localStorage.getItem('jx_background') || 'none';
+    var root = document.documentElement;
+    var layer = document.getElementById('backgroundLayer');
+    document.body.classList.remove('has-background', 'bg-grid', 'bg-aurora', 'bg-noise', 'bg-custom');
+    root.style.removeProperty('--custom-bg-image');
+    if (layer) layer.style.backgroundImage = '';
+    if (mode === 'custom') {
+        var path = customPath || localStorage.getItem('jx_background_custom') || '';
+        if (path) {
+            var imageValue = path.indexOf('data:image/') === 0 || path.indexOf('blob:') === 0 ? path : 'file://' + path.replace(/\\/g, '/').replace(/"/g, '%22');
+            var imageCss = 'url("' + imageValue + '")';
+            root.style.setProperty('--custom-bg-image', imageCss);
+            if (layer) layer.style.backgroundImage = 'linear-gradient(rgba(13,13,13,0.18), rgba(13,13,13,0.42)), ' + imageCss;
+            document.body.classList.add('has-background', 'bg-custom');
+        } else {
+            mode = 'none';
+        }
+    } else if (mode !== 'none') {
+        document.body.classList.add('has-background', 'bg-' + mode);
+    }
+    localStorage.setItem('jx_background', mode);
+    var sel = document.getElementById('backgroundSelect');
+    if (sel) sel.value = mode;
+    renderBackgroundControls();
+}
+function pickCustomBackground() {
+    if (!HAS_CEP_BRIDGE || !cs || typeof cs.evalScript !== 'function') {
+        openBackgroundImageInput();
+        return;
+    }
+    cs.evalScript('jx_pickMediaFile("image")', function (result) {
+        var res = parseResult(result);
+        if (!res || !res.success || !res.path) {
+            openBackgroundImageInput();
+            return;
+        }
+        localStorage.setItem('jx_background_custom', res.path);
+        applyBackground('custom', res.path);
+        toast('Custom background applied.', 'success');
+    });
+}
+
+function openBackgroundImageInput() {
+    var input = document.getElementById('backgroundImageInput');
+    if (input) input.click();
+}
+
+function setCustomBackgroundFile(file) {
+    if (!file || !/^image\//i.test(file.type || '')) {
+        toast('Choose an image file.', 'error');
+        return;
+    }
+    if (typeof FileReader === 'undefined') {
+        toast('Image upload is not available here.', 'error');
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+        var source = reader.result;
+        if (typeof source !== 'string') {
+            toast('Could not read background image.', 'error');
+            return;
+        }
+        compressBackgroundImage(source, function (imageData) {
+            localStorage.setItem('jx_background_custom', imageData || source);
+            applyBackground('custom', imageData || source);
+            toast('Custom background applied.', 'success');
+        });
+    };
+    reader.onerror = function () { toast('Could not read background image.', 'error'); };
+    reader.readAsDataURL(file);
+}
+
+function compressBackgroundImage(source, done) {
+    if (typeof Image === 'undefined' || typeof document === 'undefined') {
+        done(source);
+        return;
+    }
+    var img = new Image();
+    img.onload = function () {
+        var maxSide = 1600;
+        var scale = Math.min(1, maxSide / Math.max(img.width || maxSide, img.height || maxSide));
+        if (scale >= 1 && source.length < 1800000) {
+            done(source);
+            return;
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round((img.width || maxSide) * scale));
+        canvas.height = Math.max(1, Math.round((img.height || maxSide) * scale));
+        var ctx = canvas.getContext('2d');
+        if (!ctx) {
+            done(source);
+            return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        done(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = function () { done(source); };
+    img.src = source;
+}
+
+function clearCustomBackground() {
+    localStorage.removeItem('jx_background_custom');
+    applyBackground('none');
+    toast('Background cleared.');
+}
+
+function renderBackgroundControls() {
+    var actions = document.getElementById('backgroundActions');
+    if (!actions) return;
+    var mode = localStorage.getItem('jx_background') || 'none';
+    actions.classList.toggle('active', mode === 'custom');
+}
+
+function importCustomFont(file) {
+    var nr = getNodeRequire();
+    if (!nr || !file || !file.path) { toast('Could not load font.', 'error'); return; }
+    try {
+        var fs = nr('fs');
+        var name = (file.name || 'CustomFont').replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]/gi, '_');
+        var ext = (file.name.match(/\.([^.]+)$/) || [,'ttf'])[1].toLowerCase();
+        var mime = ext === 'otf' ? 'font/otf' : ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : 'font/ttf';
+        var data = fs.readFileSync(file.path).toString('base64');
+        var styleId = 'customFontStyle';
+        var style = document.getElementById(styleId) || document.createElement('style');
+        style.id = styleId;
+        style.textContent = '@font-face{font-family:"' + name + '";src:url(data:' + mime + ';base64,' + data + ')}';
+        document.head.appendChild(style);
+        document.documentElement.style.setProperty('--custom-font-family', '"' + name + '"');
+        localStorage.setItem('jx_custom_font_name', name);
+        localStorage.setItem('jx_custom_font_css', style.textContent);
+        var sel = document.getElementById('fontSelect');
+        if (sel && !sel.querySelector('option[value="custom"]')) {
+            var opt = document.createElement('option'); opt.value = 'custom'; opt.textContent = 'Custom Upload'; sel.appendChild(opt);
+        }
+        applyFont('custom');
+        toast('Custom font loaded.', 'success');
+    } catch(e) { toast('Font import failed.', 'error'); }
+}
+
+function restoreCustomFont() {
+    var css = localStorage.getItem('jx_custom_font_css');
+    var name = localStorage.getItem('jx_custom_font_name');
+    var sel = document.getElementById('fontSelect');
+    if (sel && name && !sel.querySelector('option[value="custom"]')) {
+        var opt = document.createElement('option'); opt.value = 'custom'; opt.textContent = 'Custom Upload'; sel.appendChild(opt);
+    }
+    if (css) {
+        var style = document.getElementById('customFontStyle') || document.createElement('style');
+        style.id = 'customFontStyle';
+        style.textContent = css;
+        document.head.appendChild(style);
+        if (name) document.documentElement.style.setProperty('--custom-font-family', '"' + name + '"');
+    }
+}
+
+// ── greeting ───────────────────────────────────────────────────────────────────
+
+var GREETINGS_MORNING = [
+    'goodmorning ☀️', 'morning edit goblin 😭', 'timeline just woke up fr', "you're actually up early",
+    'locking in before 10 is crazy 😭', 'mornin 💋', 'keyframes for breakfast?? 😭',
+    'who are you editing this early?', 'we are so back', 'coffee first, keyframes second',
+    'pre-10am timeline warrior', 'early render energy', 'breakfast and bezier curves??'
+];
+var GREETINGS_AFTERNOON = [
+    'keep cooking', 'no because this is so good', 'loving it', 'serving keyframes',
+    'this is giving productive', 'timeline looking almost expensive as you ',
+    'W', 'the comp is comping', 'lowkey locked in 🎧', 'midday edit mode online',
+    '10am counts as business hours now', 'render queue looking respectful',
+    'timeline is behaving today maybe', 'clean curves clean conscience',
+    'this panel believes in you unfortunately', 'post-morning productivity arc'
+];
+var GREETINGS_EVENING = [
+    'night shift editor arc', 'still cooking is wild 😭', 'this edit better go platinum',
+    'hope your day has been any good', 'we do not miss',
+    'evening flow state', 'take your time', 'one more tweak famous last words'
+];
+var GREETINGS_NIGHT = [
+    'sleep schedule found dead', '3am editor behaviour 😭', 'touch grass tomorrow maybe', 'night owl final boss',
+    'render goblin hours 💀', 'remember to drink water!',
+    ' does the timeline have you in a chokehold?', 'one more keyframe surely 😭'
+];
+
+function pickGreeting() {
+    var h = new Date().getHours();
+    var pool = h < 5  ? GREETINGS_NIGHT
+             : h < 10 ? GREETINGS_MORNING
+             : h < 17 ? GREETINGS_AFTERNOON
+             : h < 22 ? GREETINGS_EVENING
+             :          GREETINGS_NIGHT;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function applyGreeting() {
+    var name = (localStorage.getItem('jx_username') || '').trim();
+    var el = document.getElementById('greeting');
+    if (!el) return;
+    var g = pickGreeting();
+    if (name) {
+        var emoji = g.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/g);
+        var lastEmoji = emoji ? emoji[emoji.length - 1] : '';
+        var text = lastEmoji ? g.replace(lastEmoji, '').trim() : g;
+        el.textContent = text + ', ' + name + (lastEmoji ? ' ' + lastEmoji : '');
+    } else {
+        el.textContent = g;
+    }
+}
+
+// ── first-run onboarding ──────────────────────────────────────────────────────
+
+var onboardStep = 0;
+var ONBOARD_STEPS = [
+    { title: 'Let me set this up', sub: 'First, tell me what name to use in the header.' },
+    { title: 'Pick the colour', sub: 'I’ll apply it live so you can feel the difference.' },
+    { title: 'Choose the UI look', sub: 'Classic, Soft, or Compact - the panel updates while you pick.' },
+    { title: 'Pick the font', sub: 'This changes the whole panel typography instantly.' },
+    { title: 'Choose what shows', sub: 'v2 starts simple. Turn on only what you actually use.' }
+];
+
+function initOnboarding() {
+    var forceOnboarding = window.location.search.indexOf('onboard=1') !== -1;
+    if (localStorage.getItem('jx_onboarded') === '1' && !forceOnboarding) return;
+    var view = document.getElementById('onboardingView');
+    if (!view) return;
+    view.classList.remove('hidden');
+
+    var nameInput = document.getElementById('onboardName');
+    var nextBtn   = document.getElementById('onboardNext');
+    var backBtn   = document.getElementById('onboardBack');
+    var skipBtn   = document.getElementById('onboardSkip');
+    var fontSel   = document.getElementById('onboardFont');
+    var avatarInp = document.getElementById('onboardProfileImageInput');
+
+    if (nameInput) {
+        nameInput.value = localStorage.getItem('jx_username') || '';
+        nameInput.addEventListener('input', function () {
+            localStorage.setItem('jx_username', this.value.trim());
+            updateOnboardPreviews();
+            applyGreeting();
+            updateProfileFooter();
+        });
+    }
+
+    if (avatarInp) {
+        avatarInp.addEventListener('change', function () {
+            if (this.files && this.files[0]) setProfileImage(this.files[0]);
+            this.value = '';
+        });
+    }
+
+    document.querySelectorAll('.onboard-theme').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.onboard-theme').forEach(function (el) { el.classList.remove('active'); });
+            btn.classList.add('active');
+            applyTheme(btn.dataset.theme || 'amber');
+            updateOnboardPreviews();
+        });
+    });
+    document.querySelectorAll('.onboard-look').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.onboard-look').forEach(function (el) { el.classList.remove('active'); });
+            btn.classList.add('active');
+            applyUiLook(btn.dataset.look || 'classic');
+            updateOnboardPreviews();
+        });
+    });
+    document.querySelectorAll('.onboard-section').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            setSectionVisible(cb.dataset.section, cb.checked);
+            updateOnboardPreviews();
+        });
+    });
+    if (fontSel) {
+        fontSel.addEventListener('change', function () {
+            applyFont(this.value);
+            updateOnboardPreviews();
+        });
+    }
+
+    if (nextBtn) nextBtn.addEventListener('click', function () {
+        if (onboardStep >= ONBOARD_STEPS.length - 1) finishOnboarding(false);
+        else showOnboardStep(onboardStep + 1);
+    });
+    if (backBtn) backBtn.addEventListener('click', function () { showOnboardStep(onboardStep - 1); });
+    if (skipBtn) skipBtn.addEventListener('click', function () { finishOnboarding(true); });
+
+    showOnboardStep(0);
+    updateOnboardPreviews();
+}
+
+function showOnboardStep(step) {
+    onboardStep = Math.max(0, Math.min(ONBOARD_STEPS.length - 1, step));
+    var meta = ONBOARD_STEPS[onboardStep];
+    var title = document.getElementById('onboardTitle');
+    var sub = document.getElementById('onboardSub');
+    var progress = document.getElementById('onboardProgress');
+    var backBtn = document.getElementById('onboardBack');
+    var nextBtn = document.getElementById('onboardNext');
+
+    if (title) title.textContent = meta.title;
+    if (sub) sub.textContent = meta.sub;
+    if (progress) progress.style.width = (((onboardStep + 1) / ONBOARD_STEPS.length) * 100) + '%';
+    if (backBtn) backBtn.style.visibility = onboardStep === 0 ? 'hidden' : 'visible';
+    if (nextBtn) nextBtn.textContent = onboardStep === ONBOARD_STEPS.length - 1 ? 'Finish' : 'Next';
+
+    document.querySelectorAll('.onboard-step').forEach(function (el) {
+        el.classList.toggle('active', parseInt(el.dataset.step, 10) === onboardStep);
+    });
+}
+
+function updateOnboardPreviews() {
+    var name = (localStorage.getItem('jx_username') || '').trim() || 'editor';
+    var greetingPreview = document.getElementById('onboardGreetingPreview');
+    if (greetingPreview) greetingPreview.textContent = 'gm, ' + name + ' 💅';
+
+    var fontPreview = document.getElementById('onboardFontPreview');
+    if (fontPreview) fontPreview.style.fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-ui');
+
+    var visible = 0;
+    document.querySelectorAll('.onboard-section').forEach(function (cb) { if (cb.checked) visible++; });
+    var sectionPreview = document.getElementById('onboardSectionPreview');
+    if (sectionPreview) sectionPreview.textContent = visible + ' section' + (visible === 1 ? '' : 's') + ' visible';
+}
+
+function finishOnboarding(skipped) {
+    document.querySelectorAll('.section-vis-cb').forEach(function (cb) {
+        var onboardingCb = document.querySelector('.onboard-section[data-section="' + cb.dataset.section + '"]');
+        if (onboardingCb) cb.checked = onboardingCb.checked;
+        setSectionVisible(cb.dataset.section, cb.checked);
+    });
+    saveSectionVisibility();
+
+    var settingsName = document.getElementById('userNameInput');
+    if (settingsName) settingsName.value = localStorage.getItem('jx_username') || '';
+
+    localStorage.setItem('jx_onboarded', '1');
+    var view = document.getElementById('onboardingView');
+    if (view) view.classList.add('hidden');
+    applyGreeting();
+    toast(skipped ? 'Skipped setup - defaults are on.' : 'Setup saved - go make something insane 💅', 'success');
+}
+
+// ── dev page ───────────────────────────────────────────────────────────────────
+
+var sessionStart = new Date();
+var timerPaused = false;
+var pausedTotalMs = 0;
+var pauseStartedAt = 0;
+var actionsRun   = 0;
+var actionLog    = [];
+var ACTION_LOG_MAX = 30;
+var grassNudgeIndex = -1;
+var OWNER_AUTH_KEY = 'jx_owner_unlocked';
+var OWNER_SALT = 'fcd355c89361c9ad21284f00e5a24121';
+var OWNER_HASH = 'c0d9dda440d0a80adb0f095d0aa9facff47c6d5d120ecddb7a82eccda34d6f3c';
+var lastDevError = '';
+var GRASS_NUDGES = [
+    'You\'ve been editing for over an hour - definitely touch grass soon 🌿',
+    'Tiny human reminder: stretch, blink, drink water, maybe touch grass 😊',
+    'The pixels can wait 2 minutes. Your spine would appreciate it 🌱',
+    'Over an hour in - heroic, but grass is calling softly 🌿',
+    'Quick break suggestion: stand up and let your eyes reboot ✨',
+    'Editing marathon detected. Touch grass mode is highly recommended 😄',
+    'Your keyframes are safe. Go breathe some outside air for a sec 🌤️'
+];
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function openDevView() {
+    closeSettings();
+    closePresetsView();
+    closeLayerLibView();
+    closeAutomationsView();
+    document.getElementById('devView').classList.add('open');
+    renderDevView();
+}
+
+function closeDevView() {
+    document.getElementById('devView').classList.remove('open');
+}
+
+function renderDevView() {
+    var countEl = document.getElementById('devActionCount');
+    var startEl = document.getElementById('devSessionStart');
+    var verEl   = document.getElementById('devVersion');
+    if (countEl) countEl.textContent = actionsRun;
+    if (startEl) startEl.textContent =
+        pad2(sessionStart.getHours()) + ':' +
+        pad2(sessionStart.getMinutes()) + ':' +
+        pad2(sessionStart.getSeconds());
+    if (verEl) verEl.textContent = 'v' + CURRENT_VERSION;
+
+    var log = document.getElementById('devLog');
+    if (log) {
+        log.innerHTML = '';
+        if (!actionLog.length) {
+            var em = document.createElement('div');
+            em.className = 'dev-log-row';
+            em.innerHTML = '<span class="dev-log-script" style="color:var(--text-dim)">No actions yet.</span>';
+            log.appendChild(em);
+        } else {
+            actionLog.forEach(function (e) {
+                var row = document.createElement('div');
+                row.className = 'dev-log-row ' + (e.ok ? 'ok' : 'err');
+                row.innerHTML =
+                    '<span class="dev-log-time">' + e.t + '</span>' +
+                    '<span class="dev-log-script">' + escapeHtml(e.script) + '</span>' +
+                    '<span class="dev-log-status">' + (e.ok ? 'ok' : 'fail') + '</span>';
+                log.appendChild(row);
+            });
+        }
+    }
+
+    var dump = document.getElementById('devDump');
+    if (dump) {
+        var lines = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('jx_') === 0) {
+                var v = localStorage.getItem(k);
+                if (v && v.length > 120) v = v.substr(0, 120) + '… (' + v.length + ' chars)';
+                lines.push(k + ' = ' + v);
+            }
+        }
+        lines.sort();
+        dump.textContent = lines.length ? lines.join('\n') : '(empty)';
+    }
+    var diag = document.getElementById('devDiagnostics');
+    if (diag) diag.textContent = formatDiagnostics(collectDiagnostics(false));
+    renderOwnerUnlock();
+}
+
+function collectDiagnostics(includeStorage) {
+    var extPath = '';
+    try { extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch(e) {}
+    var storageKeys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) storageKeys.push(k);
+    }
+    storageKeys.sort();
+    var sections = [];
+    document.querySelectorAll('section[data-section]').forEach(function (section) {
+        sections.push(section.dataset.section + ':' + (section.style.display === 'none' ? 'hidden' : 'shown') + (section.classList.contains('collapsed') ? ':closed' : ':open'));
+    });
+    var diag = {
+        version: CURRENT_VERSION,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        node: typeof require === 'function' ? 'available' : 'missing',
+        extensionPath: extPath,
+        storageKeyCount: storageKeys.length,
+        storageKeys: storageKeys,
+        currentTheme: localStorage.getItem('jx_theme') || 'amber',
+        graphCount: safeArrayCount(localStorage.getItem('jx_curves')),
+        graphMenus: safeArrayCount(localStorage.getItem('jx_graph_menus')),
+        quickPresets: safeArrayCount(localStorage.getItem('jx_quick_presets')),
+        sections: sections,
+        actionsRun: actionsRun,
+        ownerUnlocked: isOwnerUnlocked(),
+        panel: measurePanelData(),
+        lastError: lastDevError || ''
+    };
+    if (includeStorage) diag.storage = collectJxStorage();
+    return diag;
+}
+
+function measurePanelData() {
+    var app = document.getElementById('app');
+    var scroll = document.querySelector('.scroll-area');
+    return {
+        window: window.innerWidth + 'x' + window.innerHeight,
+        app: app ? Math.round(app.getBoundingClientRect().width) + 'x' + Math.round(app.getBoundingClientRect().height) : 'missing',
+        scrollHeight: scroll ? scroll.scrollHeight : 0,
+        scrollTop: scroll ? scroll.scrollTop : 0
+    };
+}
+
+function safeArrayCount(json) {
+    try { var v = JSON.parse(json || '[]'); return Array.isArray(v) ? v.length : 0; } catch(e) { return 0; }
+}
+
+function collectJxStorage() {
+    var storage = {};
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) storage[k] = localStorage.getItem(k);
+    }
+    return storage;
+}
+
+function formatDiagnostics(diag) {
+    return [
+        'version: ' + diag.version,
+        'platform: ' + diag.platform,
+        'node: ' + diag.node,
+        'storage keys: ' + diag.storageKeyCount,
+        'graphs: ' + diag.graphCount + ' / menus: ' + diag.graphMenus,
+        'quick presets: ' + diag.quickPresets,
+        'theme: ' + diag.currentTheme,
+        'actions run: ' + diag.actionsRun,
+        'extension: ' + diag.extensionPath,
+        'sections: ' + diag.sections.join(', ')
+    ].join('\n');
+}
+
+function isOwnerUnlocked() {
+    return sessionStorage.getItem(OWNER_AUTH_KEY) === '1';
+}
+
+function renderOwnerUnlock() {
+    var unlocked = isOwnerUnlocked();
+    var status = document.getElementById('ownerUnlockStatus');
+    if (status) status.textContent = unlocked ? 'Unlocked for this panel session' : 'Locked';
+    document.querySelectorAll('.owner-only').forEach(function (el) {
+        el.classList.toggle('locked', !unlocked);
+    });
+}
+
+function ownerDigest(password, callback) {
+    password = String(password || '');
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+        var enc = new TextEncoder();
+        window.crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']).then(function (key) {
+            return window.crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode(OWNER_SALT), iterations: 100000, hash: 'SHA-256' }, key, 256);
+        }).then(function (bits) {
+            callback(bytesToHex(new Uint8Array(bits)));
+        }).catch(function () { callback(null); });
+        return;
+    }
+    try {
+        if (typeof require === 'function') {
+            var crypto = require('crypto');
+            callback(crypto.pbkdf2Sync(password, OWNER_SALT, 100000, 32, 'sha256').toString('hex'));
+            return;
+        }
+    } catch(e) {}
+    callback(null);
+}
+
+function bytesToHex(bytes) {
+    var out = '';
+    for (var i = 0; i < bytes.length; i++) out += ('0' + bytes[i].toString(16)).slice(-2);
+    return out;
+}
+
+function unlockOwnerTools() {
+    var input = document.getElementById('ownerPasswordInput');
+    var pass = input ? input.value : '';
+    ownerDigest(pass, function (digest) {
+        if (digest === OWNER_HASH) {
+            sessionStorage.setItem(OWNER_AUTH_KEY, '1');
+            if (input) input.value = '';
+            renderOwnerUnlock();
+            toast('Owner tools unlocked.', 'success');
+        } else {
+            toast('Owner password rejected.', 'error');
+        }
+    });
+}
+
+function lockOwnerTools() {
+    sessionStorage.removeItem(OWNER_AUTH_KEY);
+    renderOwnerUnlock();
+    toast('Owner tools locked.');
+}
+
+function requireOwner() {
+    if (isOwnerUnlocked()) return true;
+    toast('Owner tools are locked.', 'error');
+    return false;
+}
+
+function collectDevState() {
+    var state = {
+        version: CURRENT_VERSION,
+        exportedAt: new Date().toISOString(),
+        extensionPath: cs.getSystemPath(SystemPath.EXTENSION),
+        diagnostics: collectDiagnostics(true),
+        actionsRun: actionsRun,
+        actionLog: actionLog,
+        storage: collectJxStorage()
+    };
+    return state;
+}
+
+function writeDesktopFile(name, content, done) {
+    var path = cs.getSystemPath(SystemPath.DESKTOP) + '/' + name;
+    var safePath = path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var safeContent = String(content || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_writeFile('" + safePath + "','" + safeContent + "')", function (result) {
+        var res = parseResult(result);
+        if (done) done(res && res.success, path);
+    });
+}
+
+function exportDevState() {
+    if (!requireOwner()) return;
+    var json = JSON.stringify(collectDevState(), null, 2);
+    writeDesktopFile('jx-tools-state-' + Date.now() + '.json', json, function (ok) {
+        toast(ok ? 'Full state exported to Desktop.' : 'Export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function copyDevState() {
+    if (!requireOwner()) return;
+    var json = JSON.stringify(collectDevState(), null, 2);
+    var ok = false;
+    try {
+        var ta = document.createElement('textarea');
+        ta.value = json;
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch(e) {}
+    toast(ok ? 'State copied to clipboard.' : 'Clipboard copy failed.', ok ? 'success' : 'error');
+}
+
+function revealExtensionFolder() {
+    var path = cs.getSystemPath(SystemPath.EXTENSION);
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [path], { detached: true, stdio: 'ignore' }).unref();
+        toast('Extension folder opened.', 'success');
+    } catch(e) { toast('Could not open folder.', 'error'); }
+}
+
+function resetPanelLayout() {
+    if (!requireOwner()) return;
+    ['jx_sections', 'jx_section_collapsed', 'jx_section_order', 'jx_items', 'jx_favorites', 'jx_favorite_mode'].forEach(function (k) {
+        localStorage.removeItem(k);
+    });
+    toast('Panel layout reset. Reload the panel.', 'success');
+}
+
+function clearOwnerUnlock() {
+    if (!requireOwner()) return;
+    lockOwnerTools();
+}
+
+function refreshDiagnostics() {
+    renderDevView();
+    toast('Diagnostics refreshed.', 'success');
+}
+
+function copyDiagnostics() {
+    copyText(JSON.stringify(collectDiagnostics(false), null, 2), 'Diagnostics copied.', 'Clipboard copy failed.');
+}
+
+function downloadDiagnostics() {
+    writeDesktopFile('jx-tools-diagnostics-' + Date.now() + '.json', JSON.stringify(collectDiagnostics(false), null, 2), function (ok) {
+        toast(ok ? 'Diagnostics exported to Desktop.' : 'Diagnostics export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function clearActionLog() {
+    actionLog = [];
+    actionsRun = 0;
+    renderDevView();
+    toast('Action log cleared.');
+}
+
+function copyText(text, okMsg, failMsg) {
+    var ok = false;
+    try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch(e) {}
+    toast(ok ? okMsg : failMsg, ok ? 'success' : 'error');
+}
+
+function openPasswordFile() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-owner-password.txt'], { detached: true, stdio: 'ignore' }).unref();
+        toast('Password file opened.', 'success');
+    } catch(e) { toast('Could not open password file.', 'error'); }
+}
+
+function forceUpdateCheck() {
+    if (!requireOwner()) return;
+    try {
+        localStorage.setItem('jx_alpha_releases', '1');
+        var cb = document.getElementById('checkAlphaReleases');
+        if (cb) cb.checked = true;
+        manualCheckUpdate();
+        toast('Forced update check started.', 'success');
+    } catch(e) { toast('Could not start update check.', 'error'); }
+}
+
+function runSmokeTest() {
+    if (!requireOwner()) return;
+    var failures = [];
+    ['btnCenterAnchor', 'btnApplyEase', 'btnSaveCurve', 'settingsView', 'devView', 'curveLibrary', 'updateBanner'].forEach(function (id) {
+        if (!document.getElementById(id)) failures.push(id);
+    });
+    if (typeof graphEditor === 'undefined') failures.push('graphEditor');
+    if (typeof CURRENT_VERSION === 'undefined') failures.push('CURRENT_VERSION');
+    toast(failures.length ? 'Smoke test failed: ' + failures.join(', ') : 'Smoke test passed.', failures.length ? 'error' : 'success');
+}
+
+function backupSettings() {
+    if (!requireOwner()) return;
+    writeDesktopFile('jx-tools-settings-backup.json', JSON.stringify({ exportedAt: new Date().toISOString(), storage: collectJxStorage() }, null, 2), function (ok) {
+        toast(ok ? 'Settings backup saved to Desktop.' : 'Settings backup failed.', ok ? 'success' : 'error');
+    });
+}
+
+function restoreSettings() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require !== 'function') { toast('Node unavailable for restore.', 'error'); return; }
+        var fs = require('fs');
+        var path = cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-settings-backup.json';
+        var data = JSON.parse(fs.readFileSync(path, 'utf8'));
+        if (!data || !data.storage) { toast('Backup file is invalid.', 'error'); return; }
+        Object.keys(data.storage).forEach(function (k) { if (k.indexOf('jx_') === 0) localStorage.setItem(k, data.storage[k]); });
+        renderDevView();
+        toast('Settings restored. Reload the panel.', 'success');
+    } catch(e) { toast('No settings backup found on Desktop.', 'error'); }
+}
+
+function factoryResetStorage() {
+    if (!requireOwner()) return;
+    if (!confirm('Factory reset every jx_* setting?')) return;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('jx_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    renderDevView();
+    toast('Factory reset complete. Reload the panel.', 'success');
+}
+
+function copyVersionInfo() {
+    copyText(JSON.stringify({ version: CURRENT_VERSION, userAgent: navigator.userAgent, platform: navigator.platform }, null, 2), 'Version info copied.', 'Copy failed.');
+}
+
+function copyUpdateInfo() {
+    var info = typeof _updateInfo !== 'undefined' && _updateInfo ? _updateInfo : { updateInfo: 'none loaded' };
+    copyText(JSON.stringify(info, null, 2), 'Update info copied.', 'Copy failed.');
+}
+
+function exportActions() {
+    writeDesktopFile('jx-tools-action-log-' + Date.now() + '.json', JSON.stringify(actionLog, null, 2), function (ok) {
+        toast(ok ? 'Action log exported.' : 'Action export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportStorageKeys() {
+    writeDesktopFile('jx-tools-storage-keys-' + Date.now() + '.json', JSON.stringify(Object.keys(collectJxStorage()).sort(), null, 2), function (ok) {
+        toast(ok ? 'Storage keys exported.' : 'Storage key export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function countVisibleTools() {
+    var all = document.querySelectorAll('[data-vis-item].tool-btn').length;
+    var visible = 0;
+    document.querySelectorAll('[data-vis-item].tool-btn').forEach(function (el) {
+        if (el.offsetParent !== null) visible++;
+    });
+    toast(visible + ' visible tool buttons of ' + all + '.');
+}
+
+function pingHost() {
+    cs.evalScript('ok("Host bridge alive.")', function (result) {
+        var res = parseResult(result);
+        toast(res && res.success ? res.message : 'Host bridge failed.', res && res.success ? 'success' : 'error');
+    });
+}
+
+function copyGraphData() {
+    var data = {
+        curves: JSON.parse(localStorage.getItem('jx_curves') || '[]'),
+        menus: JSON.parse(localStorage.getItem('jx_graph_menus') || '[]'),
+        activeMenu: localStorage.getItem('jx_graph_menu_active') || 'main'
+    };
+    copyText(JSON.stringify(data, null, 2), 'Graph data copied.', 'Graph copy failed.');
+}
+
+function copySectionData() {
+    var data = { visibility: {}, collapsed: {}, order: [] };
+    try { data.visibility = JSON.parse(localStorage.getItem('jx_sections') || '{}'); } catch(e) {}
+    try { data.collapsed = JSON.parse(localStorage.getItem('jx_section_collapsed') || '{}'); } catch(e) {}
+    try { data.order = JSON.parse(localStorage.getItem('jx_section_order') || '[]'); } catch(e) {}
+    copyText(JSON.stringify(data, null, 2), 'Section data copied.', 'Section copy failed.');
+}
+
+function setAllSectionsCollapsed(collapsed) {
+    document.querySelectorAll('section[data-section]').forEach(function (section) { section.classList.toggle('collapsed', collapsed); });
+    saveSectionCollapse();
+    toast(collapsed ? 'All sections closed.' : 'All sections opened.');
+}
+
+function measurePanel() {
+    copyText(JSON.stringify(measurePanelData(), null, 2), 'Panel measurement copied.', 'Measurement copy failed.');
+}
+
+function copyLastError() {
+    copyText(lastDevError || 'No errors recorded.', 'Last error copied.', 'Copy failed.');
+}
+
+function deepSmokeTest() {
+    if (!requireOwner()) return;
+    var failures = [];
+    ['jx_curves', 'jx_graph_menus', 'jx_sections', 'jx_section_order'].forEach(function (k) {
+        var v = localStorage.getItem(k);
+        if (v) { try { JSON.parse(v); } catch(e) { failures.push(k + ' invalid JSON'); } }
+    });
+    ['client/js/main.js', 'client/js/graph-editor.js', 'client/js/updater.js', 'host/index.jsx', 'CSXS/manifest.xml'].forEach(function (rel) {
+        if (!fileExists(rel)) failures.push(rel + ' missing');
+    });
+    toast(failures.length ? 'Deep smoke failed: ' + failures.slice(0, 3).join(', ') : 'Deep smoke passed.', failures.length ? 'error' : 'success');
+}
+
+function fileExists(rel) {
+    try {
+        if (typeof require !== 'function') return true;
+        var fs = require('fs'), path = require('path');
+        return fs.existsSync(path.join(cs.getSystemPath(SystemPath.EXTENSION), rel));
+    } catch(e) { return false; }
+}
+
+function exportHtmlDump() {
+    if (!requireOwner()) return;
+    writeDesktopFile('jx-tools-dom-dump-' + Date.now() + '.html', document.documentElement.outerHTML, function (ok) {
+        toast(ok ? 'HTML dump exported.' : 'HTML dump failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportCssVars() {
+    if (!requireOwner()) return;
+    var csStyle = getComputedStyle(document.documentElement);
+    var vars = {};
+    ['--bg','--surface','--surface-2','--surface-3','--border','--accent','--accent-soft','--accent-mid','--text','--graph-card-size','--r','--ui-density'].forEach(function (k) {
+        vars[k] = csStyle.getPropertyValue(k).trim();
+    });
+    writeDesktopFile('jx-tools-css-vars-' + Date.now() + '.json', JSON.stringify(vars, null, 2), function (ok) {
+        toast(ok ? 'CSS vars exported.' : 'CSS export failed.', ok ? 'success' : 'error');
+    });
+}
+
+function exportManifestCopy() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require !== 'function') { toast('Node unavailable.', 'error'); return; }
+        var fs = require('fs'), path = require('path');
+        var manifest = fs.readFileSync(path.join(cs.getSystemPath(SystemPath.EXTENSION), 'CSXS/manifest.xml'), 'utf8');
+        writeDesktopFile('jx-tools-manifest-' + Date.now() + '.xml', manifest, function (ok) { toast(ok ? 'Manifest exported.' : 'Manifest export failed.', ok ? 'success' : 'error'); });
+    } catch(e) { toast('Manifest export failed.', 'error'); }
+}
+
+function openSettingsBackup() {
+    if (!requireOwner()) return;
+    try {
+        if (typeof require === 'function') require('child_process').spawn('open', [cs.getSystemPath(SystemPath.DESKTOP) + '/jx-tools-settings-backup.json'], { detached: true, stdio: 'ignore' }).unref();
+        toast('Backup file opened.', 'success');
+    } catch(e) { toast('Could not open backup file.', 'error'); }
+}
+
+function validateStorageJson() {
+    if (!requireOwner()) return;
+    var bad = getBadStorageKeys();
+    toast(bad.length ? 'Bad JSON: ' + bad.join(', ') : 'Storage JSON is valid.', bad.length ? 'error' : 'success');
+}
+
+function getBadStorageKeys() {
+    var bad = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i), v = localStorage.getItem(k);
+        if (k && k.indexOf('jx_') === 0 && v && /^[\[{]/.test(v)) { try { JSON.parse(v); } catch(e) { bad.push(k); } }
+    }
+    return bad;
+}
+
+function pruneBadStorageJson() {
+    if (!requireOwner()) return;
+    var bad = getBadStorageKeys();
+    bad.forEach(function (k) { localStorage.removeItem(k); });
+    renderDevView();
+    toast('Pruned ' + bad.length + ' bad JSON keys.', bad.length ? 'success' : '');
+}
+
+function resetGraphs() {
+    if (!requireOwner()) return;
+    if (!confirm('Delete all saved graphs and graph menus?')) return;
+    ['jx_curves', 'jx_graph_menus', 'jx_graph_menu_active', 'jx_graph_icon_size'].forEach(function (k) { localStorage.removeItem(k); });
+    toast('Graph library reset. Reload the panel.', 'success');
+}
+
+function resetOnboarding() {
+    if (!requireOwner()) return;
+    localStorage.removeItem('jx_onboarded');
+    toast('Onboarding reset. Reload the panel.', 'success');
+}
+
+// ── easing resize ──────────────────────────────────────────────────────────────
+
+var EASE_H_MIN = 90, EASE_H_MAX = 520, EASE_H_BIG = 360;
+
+function applyEaseHeight(h) {
+    h = Math.max(EASE_H_MIN, Math.min(EASE_H_MAX, h));
+    var c = document.getElementById('easeCanvas');
+    if (c) c.style.height = h + 'px';
+    localStorage.setItem('jx_ease_height', String(Math.round(h)));
+    updateEaseBigButton(h);
+}
+
+function updateEaseBigButton(h) {
+    var btn = document.getElementById('btnEaseBig');
+    if (!btn) return;
+    btn.textContent = h >= EASE_H_BIG ? 'Small' : 'Big';
+    btn.title = h >= EASE_H_BIG ? 'Make graph smaller' : 'Make graph bigger';
+}
+
+function initEaseResize() {
+    var saved = parseInt(localStorage.getItem('jx_ease_height'), 10);
+    if (saved && !isNaN(saved)) applyEaseHeight(saved);
+
+    var handle = document.getElementById('easeResize');
+    var canvas = document.getElementById('easeCanvas');
+    var bigBtn = document.getElementById('btnEaseBig');
+    if (!handle || !canvas) return;
+
+    updateEaseBigButton(canvas.getBoundingClientRect().height || EASE_H_MIN);
+    if (bigBtn) {
+        bigBtn.addEventListener('click', function (e) {
+            var current = canvas.getBoundingClientRect().height || EASE_H_MIN;
+            applyEaseHeight(current >= EASE_H_BIG ? 150 : EASE_H_BIG);
+            graphEditor.refreshSize();
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    }
+
+    var resizeDragging = false, startY = 0, startH = 0;
+
+    handle.addEventListener('mousedown', function (e) {
+        resizeDragging = true;
+        startY = e.clientY;
+        startH = canvas.getBoundingClientRect().height;
+        handle.classList.add('dragging');
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    window.addEventListener('mousemove', function (e) {
+        if (!resizeDragging) return;
+        applyEaseHeight(startH + (e.clientY - startY));
+        graphEditor.refreshSize();
+    });
+    window.addEventListener('mouseup', function () {
+        if (!resizeDragging) return;
+        resizeDragging = false;
+        handle.classList.remove('dragging');
+    });
+}
+
+// ── session timer ──────────────────────────────────────────────────────────────
+
+function initSessionTimer() {
+    var el = document.getElementById('sessionTimer');
+    if (!el) return;
+    localStorage.setItem('jx_edit_timer_start', String(sessionStart.getTime()));
+    localStorage.removeItem('jx_timer_paused');
+    localStorage.removeItem('jx_timer_paused_total');
+    localStorage.removeItem('jx_timer_pause_started');
+    el.addEventListener('click', function (e) {
+        e.preventDefault();
+        sessionStart = new Date();
+        pausedTotalMs = 0;
+        pauseStartedAt = 0;
+        timerPaused = false;
+        grassNudgeIndex = -1;
+        localStorage.setItem('jx_edit_timer_start', String(sessionStart.getTime()));
+        localStorage.setItem('jx_timer_paused_total', '0');
+        localStorage.setItem('jx_timer_paused', '0');
+        localStorage.removeItem('jx_timer_pause_started');
+        updateTimerPauseButton();
+        toast('Time spent editing reset 😊', 'success');
+        tick();
+    });
+    function tick() {
+        var now = Date.now();
+        var effectivePaused = pausedTotalMs + (timerPaused && pauseStartedAt ? now - pauseStartedAt : 0);
+        var s = Math.max(0, Math.floor((now - sessionStart.getTime() - effectivePaused) / 1000));
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        el.textContent = (timerPaused ? 'Paused editing ' : 'Time spent editing ') + h + ':' + pad2(m) + ':' + pad2(s % 60);
+        var nudgeIndex = Math.floor((s - 3600) / 900);
+        if (s >= 3600 && nudgeIndex > grassNudgeIndex) {
+            grassNudgeIndex = nudgeIndex;
+            toast(GRASS_NUDGES[nudgeIndex % GRASS_NUDGES.length], 'success');
+        }
+    }
+    tick();
+    setInterval(tick, 1000);
+    updateTimerPauseButton();
+}
+
+function toggleEditingTimerPause() {
+    if (timerPaused) {
+        if (pauseStartedAt) pausedTotalMs += Date.now() - pauseStartedAt;
+        timerPaused = false;
+        pauseStartedAt = 0;
+        localStorage.setItem('jx_timer_paused_total', String(pausedTotalMs));
+        localStorage.removeItem('jx_timer_pause_started');
+        localStorage.setItem('jx_timer_paused', '0');
+        toast('Editing timer resumed.', 'success');
+    } else {
+        timerPaused = true;
+        pauseStartedAt = Date.now();
+        localStorage.setItem('jx_timer_pause_started', String(pauseStartedAt));
+        localStorage.setItem('jx_timer_paused', '1');
+        toast('Editing timer paused.');
+    }
+    updateTimerPauseButton();
+}
+
+function updateTimerPauseButton() {
+    var btn = document.getElementById('devPauseTimer');
+    if (btn) btn.textContent = timerPaused ? 'Resume Editing Timer' : 'Pause Editing Timer';
+}
+
+// ── per-item visibility ────────────────────────────────────────────────────────
+
+function initItemVisibility() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('jx_items') || '{}'); } catch (e) {}
+
+    document.querySelectorAll('.item-vis-cb').forEach(function (cb) {
+        var key = cb.dataset.item;
+        var visible = saved[key] !== false;
+        cb.checked = visible;
+        setItemVisible(key, visible);
+        cb.addEventListener('change', function () {
+            setItemVisible(key, cb.checked);
+            saveItemVisibility();
+            if (key === 'animation.beatdetect') setBeatMode(beatMode);
+        });
+    });
+
+    var toggle = document.getElementById('advVisToggle');
+    var panel  = document.getElementById('advVisPanel');
+    if (toggle && panel) {
+        toggle.addEventListener('click', function () {
+            toggle.classList.toggle('open');
+            panel.classList.toggle('open');
+        });
+    }
+}
+
+function setItemVisible(key, visible) {
+    document.querySelectorAll('[data-vis-item="' + key + '"]').forEach(function (el) {
+        el.classList.toggle('vis-hidden', !visible);
+    });
+}
+
+function saveItemVisibility() {
+    var state = {};
+    document.querySelectorAll('.item-vis-cb').forEach(function (cb) {
+        state[cb.dataset.item] = cb.checked;
+    });
+    localStorage.setItem('jx_items', JSON.stringify(state));
+}
+
+var favoriteMode = localStorage.getItem('jx_favorite_mode') === '1';
+var favoriteItems = {};
+
+function initFavorites() {
+    try { favoriteItems = JSON.parse(localStorage.getItem('jx_favorites') || '{}'); } catch (e) { favoriteItems = {}; }
+    document.querySelectorAll('[data-vis-item]').forEach(function (el) {
+        if (!el.classList.contains('tool-btn')) return;
+        var key = el.dataset.visItem;
+        var star = document.createElement('span');
+        star.className = 'favorite-star';
+        star.setAttribute('role', 'button');
+        star.setAttribute('tabindex', '0');
+        star.title = 'Favorite this tool';
+        star.textContent = favoriteItems[key] ? '★' : '☆';
+        star.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            favoriteItems[key] = !favoriteItems[key];
+            if (!favoriteItems[key]) delete favoriteItems[key];
+            localStorage.setItem('jx_favorites', JSON.stringify(favoriteItems));
+            star.textContent = favoriteItems[key] ? '★' : '☆';
+            applyFavoriteMode();
+        });
+        star.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                star.click();
+            }
+        });
+        el.appendChild(star);
+    });
+    applyFavoriteMode();
+}
+
+function toggleFavoriteMode() {
+    favoriteMode = !favoriteMode;
+    localStorage.setItem('jx_favorite_mode', favoriteMode ? '1' : '0');
+    applyFavoriteMode();
+    toast(favoriteMode ? 'Showing favorite tools only.' : 'Showing all tools.');
+}
+
+function applyFavoriteMode() {
+    document.body.classList.toggle('favorites-mode', favoriteMode);
+    var btn = document.getElementById('favoritesBtn');
+    if (btn) btn.classList.toggle('active', favoriteMode);
+    document.querySelectorAll('[data-vis-item]').forEach(function (el) {
+        var key = el.dataset.visItem;
+        el.classList.toggle('favorite-filter-hidden', favoriteMode && !favoriteItems[key]);
+    });
+    document.querySelectorAll('section[data-section]').forEach(function (section) {
+        if (!favoriteMode) { section.classList.remove('favorite-empty'); return; }
+        var hasFavorite = false;
+        section.querySelectorAll('[data-vis-item]').forEach(function (el) {
+            if (!el.classList.contains('favorite-filter-hidden')) hasFavorite = true;
+        });
+        section.classList.toggle('favorite-empty', !hasFavorite);
+    });
+}
+
+function clearFavorites() {
+    favoriteItems = {};
+    localStorage.removeItem('jx_favorites');
+    document.querySelectorAll('.favorite-star').forEach(function (star) { star.textContent = '☆'; });
+    applyFavoriteMode();
+    toast('Favorites cleared.');
+}
+
+// ── init ───────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('brandVer').textContent        = 'v' + CURRENT_VERSION;
+    document.getElementById('settingsVersion').textContent = 'v' + CURRENT_VERSION;
+
+    applyTheme(localStorage.getItem('jx_theme') || 'amber');
+    applyUiLook(localStorage.getItem('jx_ui_look') || 'classic');
+    restoreCustomFont();
+    applyFont(localStorage.getItem('jx_font') || 'system');
+    applyBackground(localStorage.getItem('jx_background') || 'none');
+    applyInterfaceMode(localStorage.getItem('jx_interface_mode') || 'simple');
+    loadLabelSettings();
+    bindUI();
+    initBeatMode();
+    initSectionVisibility();
+    initSectionControls();
+    initToolSearch();
+    initItemVisibility();
+    initFavorites();
+    initProjectFiles();
+    initAutomations();
+    if (window.JXProfileCropper) JXProfileCropper.init();
+    initCurveAI();
+    updateProfileFooter();
+    graphEditor.init(document.getElementById('easeCanvas'));
+    initEaseResize();
+    applyGreeting();
+    initSessionTimer();
+    initOnboarding();
+
+    if (loadedPresetPath) setPresetLoaded(loadedPresetPath);
+    if (window.JXUIDebug) JXUIDebug.log('boot');
+    initUpdater();
+});
+
+// ── bind UI ────────────────────────────────────────────────────────────────────
+
+function bindUI() {
+    document.getElementById('favoritesBtn').addEventListener('click', toggleFavoriteMode);
+    document.getElementById('searchBtn').addEventListener('click', toggleToolSearch);
+    document.getElementById('clearSearch').addEventListener('click', clearToolSearch);
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('settingsBack').addEventListener('click', closeSettings);
+    document.getElementById('automationsBtn').addEventListener('click', openAutomationsView);
+    document.getElementById('automationsBack').addEventListener('click', closeAutomationsView);
+    var notesButton = document.getElementById('notesBtn');
+    if (notesButton) notesButton.addEventListener('click', openNotesView);
+    var notesBack = document.getElementById('notesBack');
+    if (notesBack) notesBack.addEventListener('click', closeNotesView);
+    initNotes();
+    document.getElementById('presetsBtn').addEventListener('click', openPresetsView);
+    document.getElementById('presetsBack').addEventListener('click', closePresetsView);
+    document.getElementById('layerLibBtn').addEventListener('click', openLayerLibView);
+    document.getElementById('layerLibBack').addEventListener('click', closeLayerLibView);
+    document.getElementById('btnSaveLayerStack').addEventListener('click', saveLayerStack);
+    var openLayerLibraryFolderBtn = document.getElementById('btnOpenLayerLibraryFolder');
+    if (openLayerLibraryFolderBtn) openLayerLibraryFolderBtn.addEventListener('click', openLayerLibraryFolder);
+    document.getElementById('devBtn').addEventListener('click', openDevView);
+    document.getElementById('devBack').addEventListener('click', closeDevView);
+    document.getElementById('devRefreshDiagnostics').addEventListener('click', refreshDiagnostics);
+    document.getElementById('devCopyDiagnostics').addEventListener('click', copyDiagnostics);
+    document.getElementById('devDownloadDiagnostics').addEventListener('click', downloadDiagnostics);
+    document.getElementById('devOpenExtensionNormal').addEventListener('click', revealExtensionFolder);
+    document.getElementById('devClearActionLog').addEventListener('click', clearActionLog);
+    document.getElementById('devCopyVersion').addEventListener('click', copyVersionInfo);
+    document.getElementById('devCopyUpdateInfo').addEventListener('click', copyUpdateInfo);
+    document.getElementById('devExportActions').addEventListener('click', exportActions);
+    document.getElementById('devExportStorageKeys').addEventListener('click', exportStorageKeys);
+    document.getElementById('devCountTools').addEventListener('click', countVisibleTools);
+    document.getElementById('devPingHost').addEventListener('click', pingHost);
+    document.getElementById('devCopyGraphData').addEventListener('click', copyGraphData);
+    document.getElementById('devCopySectionData').addEventListener('click', copySectionData);
+    document.getElementById('devToggleAllSections').addEventListener('click', function () { setAllSectionsCollapsed(false); });
+    document.getElementById('devCollapseAllSections').addEventListener('click', function () { setAllSectionsCollapsed(true); });
+    document.getElementById('devMeasurePanel').addEventListener('click', measurePanel);
+    document.getElementById('devCopyLastError').addEventListener('click', copyLastError);
+    document.getElementById('ownerUnlockBtn').addEventListener('click', unlockOwnerTools);
+    document.getElementById('ownerLockBtn').addEventListener('click', lockOwnerTools);
+    document.getElementById('ownerPasswordInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') unlockOwnerTools();
+    });
+    document.getElementById('devExportState').addEventListener('click', exportDevState);
+    document.getElementById('devCopyState').addEventListener('click', copyDevState);
+    document.getElementById('devOpenExtension').addEventListener('click', revealExtensionFolder);
+    document.getElementById('devOpenPasswordFile').addEventListener('click', openPasswordFile);
+    document.getElementById('devForceUpdateCheck').addEventListener('click', forceUpdateCheck);
+    document.getElementById('devRunSmokeTest').addEventListener('click', runSmokeTest);
+    document.getElementById('devDeepSmokeTest').addEventListener('click', deepSmokeTest);
+    document.getElementById('devBackupSettings').addEventListener('click', backupSettings);
+    document.getElementById('devRestoreSettings').addEventListener('click', restoreSettings);
+    document.getElementById('devExportHtmlDump').addEventListener('click', exportHtmlDump);
+    document.getElementById('devExportCssVars').addEventListener('click', exportCssVars);
+    document.getElementById('devExportManifest').addEventListener('click', exportManifestCopy);
+    document.getElementById('devOpenBackupFile').addEventListener('click', openSettingsBackup);
+    document.getElementById('devValidateStorage').addEventListener('click', validateStorageJson);
+    document.getElementById('devPruneBadStorage').addEventListener('click', pruneBadStorageJson);
+    document.getElementById('devResetGraphs').addEventListener('click', resetGraphs);
+    document.getElementById('devResetOnboarding').addEventListener('click', resetOnboarding);
+    document.getElementById('devResetLayout').addEventListener('click', resetPanelLayout);
+    document.getElementById('devFactoryReset').addEventListener('click', factoryResetStorage);
+    document.getElementById('devClearOwner').addEventListener('click', clearOwnerUnlock);
+
+    // theme swatches
+    document.querySelectorAll('.theme-swatch').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            if (!btn.dataset.theme) return;
+            if (btn.dataset.theme === 'custom') {
+                e.preventDefault();
+                openCustomThemePicker();
+                return;
+            }
+            applyTheme(btn.dataset.theme);
+        });
+    });
+
+    // font selector
+    var fontSel = document.getElementById('fontSelect');
+    if (fontSel) {
+        fontSel.addEventListener('change', function () { applyFont(this.value); });
+    }
+
+    var uiLookSel = document.getElementById('uiLookSelect');
+    if (uiLookSel) {
+        uiLookSel.addEventListener('change', function () { applyUiLook(this.value); });
+    }
+
+    var ifModeSel = document.getElementById('interfaceModeSelect');
+    if (ifModeSel) {
+        ifModeSel.addEventListener('change', function () { applyInterfaceMode(this.value); });
+    }
+
+    var bgSel = document.getElementById('backgroundSelect');
+    if (bgSel) bgSel.addEventListener('change', function () { this.value === 'custom' ? pickCustomBackground() : applyBackground(this.value); });
+    var pickBg = document.getElementById('pickBackgroundImage');
+    if (pickBg) pickBg.addEventListener('click', pickCustomBackground);
+    var clearBg = document.getElementById('clearBackgroundImage');
+    if (clearBg) clearBg.addEventListener('click', clearCustomBackground);
+    var bgUpload = document.getElementById('backgroundImageInput');
+    if (bgUpload) bgUpload.addEventListener('change', function () { if (this.files && this.files[0]) setCustomBackgroundFile(this.files[0]); this.value = ''; });
+    var fontUpload = document.getElementById('customFontInput');
+    if (fontUpload) fontUpload.addEventListener('change', function () { if (this.files && this.files[0]) importCustomFont(this.files[0]); this.value = ''; });
+    var avatarInput = document.getElementById('profileImageInput');
+    if (avatarInput) avatarInput.addEventListener('change', function () { if (this.files && this.files[0]) setProfileImage(this.files[0]); this.value = ''; });
+    var clearAvatar = document.getElementById('clearProfileImage');
+    if (clearAvatar) clearAvatar.addEventListener('click', clearProfileImage);
+    var footerProfile = document.getElementById('footerProfile');
+    if (footerProfile) footerProfile.addEventListener('click', openSettings);
+
+    // user name
+    var nameInp = document.getElementById('userNameInput');
+    if (nameInp) {
+        nameInp.value = localStorage.getItem('jx_username') || '';
+        nameInp.addEventListener('input', function () {
+            localStorage.setItem('jx_username', this.value);
+            applyGreeting();
+            updateProfileFooter();
+        });
+    }
+
+    document.getElementById('btnCheckUpdate').addEventListener('click', manualCheckUpdate);
+    var forceTerminalUpdateBtn = document.getElementById('btnForceTerminalUpdate');
+    if (forceTerminalUpdateBtn) forceTerminalUpdateBtn.addEventListener('click', forceTerminalUpdate);
+    var openReleasePageBtn = document.getElementById('btnOpenReleasePage');
+    if (openReleasePageBtn) openReleasePageBtn.addEventListener('click', openLatestReleasePage);
+    var hideUpdateWeekBtn = document.getElementById('btnHideUpdateWeek');
+    if (hideUpdateWeekBtn) hideUpdateWeekBtn.addEventListener('click', hideUpdatesForWeek);
+    var resetUpdateNoticesBtn = document.getElementById('btnResetUpdateNotices');
+    if (resetUpdateNoticesBtn) resetUpdateNoticesBtn.addEventListener('click', resetUpdateNotices);
+    refreshUpdateHealth();
+
+    ['labelFootage', 'labelText', 'labelEffects'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', saveLabelSettings);
+    });
+
+    // layer tools
+    document.getElementById('btnPrecompose').addEventListener('click', function () {
+        run('jx_precomposeSelected()');
+    });
+    document.getElementById('btnFrameBlend').addEventListener('click', function () {
+        var mode = document.querySelector('input[name="fbMode"]:checked').value;
+        run('jx_enableFrameBlending("' + mode + '")');
+    });
+    document.getElementById('btnMotionBlur').addEventListener('click', function () {
+        run('jx_enableMotionBlur()');
+    });
+    document.getElementById('btnTrimComp').addEventListener('click', function () {
+        run('jx_trimCompToWorkArea()');
+    });
+    document.getElementById('btnAutoLabel').addEventListener('click', function () {
+        var fl = parseInt(document.getElementById('labelFootage').value) || 8;
+        var tl = parseInt(document.getElementById('labelText').value)    || 2;
+        var el = parseInt(document.getElementById('labelEffects').value) || 10;
+        run('jx_autoLabelLayers(' + fl + ',' + tl + ',' + el + ')');
+    });
+    document.getElementById('btnCenterAnchor').addEventListener('click', function () {
+        run('jx_centerAnchorAll()');
+    });
+    document.getElementById('btnNullFromSel').addEventListener('click', function () {
+        run('jx_nullFromSelection()');
+    });
+    document.getElementById('btnSequence').addEventListener('click', function () {
+        var gap = parseFloat(document.getElementById('seqGap').value) || 0;
+        run('jx_sequenceLayers(' + gap + ')');
+    });
+    document.getElementById('btnRenameLayers').addEventListener('click', function () {
+        var f = document.getElementById('renameFind').value;
+        var r = document.getElementById('renameReplace').value;
+        var p = document.getElementById('renamePrefix').value;
+        var s = document.getElementById('renameSuffix').value;
+        function esc(v) { return v.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+        run("jx_renameLayers('" + esc(f) + "','" + esc(r) + "','" + esc(p) + "','" + esc(s) + "')");
+    });
+
+    // animation tools
+    document.getElementById('btnWordAnimate').addEventListener('click', function () {
+        var ms  = parseFloat(document.getElementById('wordOffset').value) || 80;
+        var sec = (ms / 1000).toFixed(4);
+        run('jx_wordByWordAnimate(' + sec + ')');
+    });
+    document.getElementById('btnSnapToMarkers').addEventListener('click', function () {
+        run('jx_snapKeysToMarkers()');
+    });
+    document.getElementById('btnClearMarkers').addEventListener('click', function () {
+        run('jx_clearCompMarkers()');
+    });
+
+    // release checkbox
+    var checkPre = document.getElementById('checkAlphaReleases');
+    if (checkPre) {
+        checkPre.checked = localStorage.getItem('jx_alpha_releases') === '1';
+        checkPre.addEventListener('change', function () {
+            localStorage.setItem('jx_alpha_releases', checkPre.checked ? '1' : '0');
+        });
+    }
+
+    // fx tools
+    document.getElementById('btnEchoTrail').addEventListener('click', function () {
+        var steps  = document.getElementById('echoSteps').value  || '3';
+        var offset = document.getElementById('echoOffset').value || '0.1';
+        run('jx_echoTrail(' + steps + ',' + offset + ')');
+    });
+    document.getElementById('btnLoopDuplicate').addEventListener('click', function () {
+        var repeats = document.getElementById('loopRepeats').value || '2';
+        run('jx_loopDuplicate(' + repeats + ')');
+    });
+
+    // colour preset
+    var zone  = document.getElementById('fileZone');
+    var input = document.getElementById('ffxInput');
+    zone.addEventListener('click', function () { input.click(); });
+    input.addEventListener('change', function () {
+        if (this.files.length) handleFile(this.files[0]);
+    });
+    zone.addEventListener('dragover', function (e) {
+        e.preventDefault(); zone.classList.add('over');
+    });
+    zone.addEventListener('dragleave', function () { zone.classList.remove('over'); });
+    zone.addEventListener('drop', function (e) {
+        e.preventDefault(); zone.classList.remove('over');
+        var f = e.dataTransfer.files[0];
+        if (f && f.name.toLowerCase().endsWith('.ffx')) {
+            handleFile(f);
+        } else {
+            toast('That\'s not a .ffx file.', 'error');
+        }
+    });
+    document.getElementById('btnApplyColor').addEventListener('click', function () {
+        if (!loadedPresetPath) return;
+        var safe = loadedPresetPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        run("jx_applyFFXPreset('" + safe + "')");
+    });
+
+    // keyframes
+    document.getElementById('btnStretch').addEventListener('click', function () {
+        run('jx_stretchKeyframesToClip()');
+    });
+    document.getElementById('btnReverseKeys').addEventListener('click', function () {
+        run('jx_reverseKeyframes()');
+    });
+
+    // easing
+    document.getElementById('btnDrawMode').addEventListener('click', function () {
+        graphEditor.toggleDrawMode();
+    });
+    document.getElementById('btnApplyEase').addEventListener('click', function () {
+        var c    = graphEditor.getCurve();
+        var json = JSON.stringify(c).replace(/'/g, "\\'");
+        run("jx_applyEase('" + json + "')");
+    });
+    document.getElementById('btnCopyCSS').addEventListener('click', copyGraphCSS);
+    document.getElementById('btnDescribeGraph').addEventListener('click', generateGraphFromPrompt);
+    document.getElementById('btnSaveDescribedGraph').addEventListener('click', saveDescribedGraph);
+    document.getElementById('btnSaveCurve').addEventListener('click', openSaveModal);
+    document.getElementById('btnAddGraphMenu').addEventListener('click', addGraphMenuPrompt);
+    document.querySelectorAll('[data-graph-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () { graphEditor.setGraphPage(btn.dataset.graphTab); });
+    });
+
+    // quick presets drop zone
+    var pdz = document.getElementById('presetDropZone');
+    var pfi = document.getElementById('presetFileInput');
+    pdz.addEventListener('click', function () { pfi.click(); });
+    pfi.addEventListener('change', function () {
+        for (var i = 0; i < this.files.length; i++) addQuickPreset(this.files[i]);
+        this.value = '';
+    });
+    pdz.addEventListener('dragover', function (e) { e.preventDefault(); pdz.classList.add('over'); });
+    pdz.addEventListener('dragleave', function () { pdz.classList.remove('over'); });
+    pdz.addEventListener('drop', function (e) {
+        e.preventDefault(); pdz.classList.remove('over');
+        var files = e.dataTransfer.files;
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].name.toLowerCase().endsWith('.ffx')) addQuickPreset(files[i]);
+        }
+    });
+
+
+    document.getElementById('settingsClearPreset').addEventListener('click', function () {
+        loadedPresetPath = null;
+        localStorage.removeItem('jx_preset');
+        setPresetUnloaded();
+        renderSettingsPreset();
+        toast('Preset cleared.');
+    });
+
+    document.getElementById('clearFavorites').addEventListener('click', clearFavorites);
+    document.getElementById('btnTransferFlowGraphs').addEventListener('click', transferFlowGraphs);
+    document.getElementById('btnSettingsAddGraphMenu').addEventListener('click', addGraphMenuPrompt);
+    document.getElementById('graphIconSize').addEventListener('input', function () {
+        graphEditor.setCustomIconSize(this.value);
+    });
+    document.getElementById('rerunOnboarding').addEventListener('click', function () {
+        localStorage.removeItem('jx_onboarded');
+        closeSettings();
+        initOnboarding();
+    });
+    document.getElementById('devPauseTimer').addEventListener('click', toggleEditingTimerPause);
+
+    document.getElementById('saveCancel').addEventListener('click', closeSaveModal);
+    document.getElementById('saveConfirm').addEventListener('click', confirmSave);
+    document.getElementById('saveInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter')  confirmSave();
+        if (e.key === 'Escape') closeSaveModal();
+    });
+    document.getElementById('saveModal').addEventListener('click', function (e) {
+        if (e.target === this) closeSaveModal();
+    });
+
+    // dev page clear storage
+    document.getElementById('devClearStorage').addEventListener('click', function () {
+        var keys = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('jx_') === 0) keys.push(k);
+        }
+        keys.forEach(function (k) { localStorage.removeItem(k); });
+        favoriteItems = {};
+        favoriteMode = false;
+        toast('Cleared ' + keys.length + ' storage keys.');
+        updateTimerPauseButton();
+        applyFavoriteMode();
+        renderDevView();
+    });
+}
+
+// ── label settings ─────────────────────────────────────────────────────────────
+
+function loadLabelSettings() {
+    var footage = localStorage.getItem('jx_label_footage');
+    var text    = localStorage.getItem('jx_label_text');
+    var effects = localStorage.getItem('jx_label_effects');
+    if (footage) document.getElementById('labelFootage').value = footage;
+    if (text)    document.getElementById('labelText').value    = text;
+    if (effects) document.getElementById('labelEffects').value = effects;
+}
+
+function saveLabelSettings() {
+    localStorage.setItem('jx_label_footage', document.getElementById('labelFootage').value);
+    localStorage.setItem('jx_label_text',    document.getElementById('labelText').value);
+    localStorage.setItem('jx_label_effects', document.getElementById('labelEffects').value);
+}
+
+// ── colour preset ──────────────────────────────────────────────────────────────
+
+function handleFile(file) {
+    var path = file.path || '';
+    if (!path) { toast('Couldn\'t read the file path.', 'error'); return; }
+    loadedPresetPath = path;
+    localStorage.setItem('jx_preset', path);
+    setPresetLoaded(path);
+    toast('Preset loaded.');
+}
+
+function setPresetLoaded(path) {
+    var name = path.split('/').pop().split('\\').pop();
+    document.getElementById('fileZoneName').textContent = name;
+    document.getElementById('fileZoneHint').style.display = 'none';
+    document.getElementById('fileZone').classList.add('loaded');
+    document.getElementById('btnApplyColor').disabled = false;
+    renderSettingsPreset();
+}
+
+function setPresetUnloaded() {
+    document.getElementById('fileZoneName').textContent = 'Drop your .ffx file here';
+    document.getElementById('fileZoneHint').style.display = '';
+    document.getElementById('fileZone').classList.remove('loaded');
+    document.getElementById('btnApplyColor').disabled = true;
+}
+
+// ── quick presets ──────────────────────────────────────────────────────────────
+
+function openPresetsView() {
+    closeSettings();
+    closeDevView();
+    closeLayerLibView();
+    document.getElementById('presetsView').classList.add('open');
+    renderPresetsList();
+}
+
+function closePresetsView() {
+    document.getElementById('presetsView').classList.remove('open');
+}
+
+function addQuickPreset(file) {
+    var path = file.path || '';
+    if (!path) { toast('Couldn\'t read file path.', 'error'); return; }
+    var name = file.name.replace(/\.ffx$/i, '');
+    if (quickPresets.some(function (p) { return p.path === path; })) {
+        toast('"' + name + '" is already in your list.', 'error'); return;
+    }
+    quickPresets.push({ id: Date.now().toString(), name: name, path: path });
+    localStorage.setItem('jx_quick_presets', JSON.stringify(quickPresets));
+    renderPresetsList();
+    toast('Added: ' + name);
+}
+
+function removeQuickPreset(id) {
+    quickPresets = quickPresets.filter(function (p) { return p.id !== id; });
+    localStorage.setItem('jx_quick_presets', JSON.stringify(quickPresets));
+    renderPresetsList();
+}
+
+function renderPresetsList() {
+    var list  = document.getElementById('presetsList');
+    var empty = document.getElementById('presetsEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!quickPresets.length) {
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    var wrap = document.createElement('div');
+    wrap.className = 'graph-library';
+    wrap.style.marginTop = '0';
+    quickPresets.forEach(function (preset) {
+        var item = document.createElement('div');
+        item.className = 'preset-item';
+        var nameEl = document.createElement('span');
+        nameEl.className   = 'preset-item-name';
+        nameEl.textContent = preset.name;
+        var del = document.createElement('button');
+        del.className = 'graph-item-del';
+        del.title     = 'Remove';
+        del.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        del.addEventListener('click', function (e) {
+            e.stopPropagation();
+            removeQuickPreset(preset.id);
+        });
+        item.appendChild(nameEl);
+        item.appendChild(del);
+        item.addEventListener('click', function (e) {
+            if (e.target.closest('.graph-item-del')) return;
+            var safe = preset.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            run("jx_applyFFXPreset('" + safe + "')");
+        });
+        wrap.appendChild(item);
+    });
+    list.appendChild(wrap);
+}
+
+// ── layer library ──────────────────────────────────────────────────────────────
+
+function refreshUpdateHealth() {
+    var el = document.getElementById('updateHealth');
+    if (!el) return;
+    var snoozed = false;
+    try { snoozed = Number(localStorage.getItem('jx_update_snooze_until') || 0) > Date.now(); } catch(e) {}
+    el.textContent = snoozed ? 'Update notices are hidden for now.' : 'Current version ready. Installer app preferred.';
+}
+
+function hideUpdatesForWeek() {
+    try { localStorage.setItem('jx_update_snooze_until', String(Date.now() + 7 * 24 * 60 * 60 * 1000)); } catch(e) {}
+    var banner = document.getElementById('updateBanner');
+    if (banner) banner.style.display = 'none';
+    refreshUpdateHealth();
+    toast('Update notices hidden for 7 days.');
+}
+
+function resetUpdateNotices() {
+    try {
+        localStorage.removeItem('jx_update_snooze_until');
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf('jx_update_dismissed_') === 0) localStorage.removeItem(key);
+        }
+    } catch(e) {}
+    refreshUpdateHealth();
+    toast('Update notices reset.');
+    if (typeof manualCheckUpdate === 'function') manualCheckUpdate();
+}
+
+function openLayerLibraryFolder() {
+    try {
+        var nr = getNodeRequire();
+        if (!nr) { toast('Node is unavailable.', 'error'); return; }
+        var path = nr('path');
+        var os = nr('os');
+        var fs = nr('fs');
+        var dir = path.join(os.homedir(), 'Library/Application Support/jx Tools/Layer Library');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        nr('child_process').execFile('/usr/bin/open', [dir], function() {});
+        toast('Opened saved stacks folder.', 'success');
+    } catch(e) {
+        toast('Could not open saved stacks folder.', 'error');
+    }
+}
+
+function getNodeRequire() {
+    try { if (typeof cep_node !== 'undefined' && cep_node.require) return cep_node.require.bind(cep_node); } catch(e) {}
+    try { if (typeof require === 'function') return require; } catch(e) {}
+    return null;
+}
+
+function openLayerLibView() {
+    closeSettings();
+    closeDevView();
+    closePresetsView();
+    closeAutomationsView();
+    closeNotesView();
+    document.getElementById('layerLibView').classList.add('open');
+    refreshLayerLibrary();
+}
+
+function closeLayerLibView() {
+    var view = document.getElementById('layerLibView');
+    if (view) view.classList.remove('open');
+}
+
+function saveLayerStack() {
+    var input = document.getElementById('layerLibName');
+    var name = (input && input.value.trim()) || ('Layer Stack ' + shortDate());
+    var safe = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_saveLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+        if (res && res.success) {
+            if (input) input.value = '';
+            refreshLayerLibrary();
+        }
+    });
+}
+
+function refreshLayerLibrary() {
+    cs.evalScript('jx_listLayerStacks()', function (result) {
+        var res = parseResult(result);
+        renderLayerLibrary(res && res.items ? res.items : []);
+    });
+}
+
+function renderLayerLibrary(items) {
+    var list = document.getElementById('layerLibList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items.length) {
+        list.innerHTML = '<div class="graph-empty">No saved layer stacks yet.</div>';
+        return;
+    }
+    items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'layer-lib-item';
+        row.innerHTML = '<div class="layer-lib-preview"></div><div class="layer-lib-main"><span class="layer-lib-name"></span><span class="layer-lib-meta">' + item.layers + ' layers · ' + item.duration + 's</span><div class="layer-lib-preview-text"></div></div>';
+        row.querySelector('.layer-lib-name').textContent = item.name;
+        renderLayerStackPreview(row, item);
+        var apply = document.createElement('button');
+        apply.className = 'tool-btn small';
+        apply.textContent = 'Add';
+        apply.addEventListener('click', function () { applyLayerStack(item.id); });
+        var del = document.createElement('button');
+        del.className = 'tool-btn small danger';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () { deleteLayerStack(item.id); });
+        row.appendChild(apply);
+        row.appendChild(del);
+        list.appendChild(row);
+    });
+}
+
+function renderLayerStackPreview(row, item) {
+    var previewBox = row.querySelector('.layer-lib-preview');
+    var previewText = row.querySelector('.layer-lib-preview-text');
+    var preview = item.preview || [];
+    var names = [];
+    for (var i = 0; i < Math.min(preview.length, 4); i++) {
+        var layer = preview[i] || {};
+        var chip = document.createElement('span');
+        chip.className = 'layer-lib-chip ' + String(layer.kind || 'layer').toLowerCase();
+        chip.textContent = (layer.kind || 'L').charAt(0).toUpperCase();
+        chip.title = layer.name || layer.kind || 'Layer';
+        if (previewBox) previewBox.appendChild(chip);
+        if (layer.name) names.push(layer.name);
+    }
+    if (preview.length > 4 && previewBox) {
+        var more = document.createElement('span');
+        more.className = 'layer-lib-chip more';
+        more.textContent = '+' + (preview.length - 4);
+        previewBox.appendChild(more);
+    }
+    if (previewText) previewText.textContent = names.length ? names.join(', ') : 'Saved layer stack';
+}
+
+function applyLayerStack(id) {
+    var safe = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_applyLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+    });
+}
+
+function deleteLayerStack(id) {
+    if (!confirm('Delete this saved layer stack?')) return;
+    var safe = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    cs.evalScript("jx_deleteLayerStack('" + safe + "')", function (result) {
+        var res = parseResult(result);
+        if (res) toast(res.message, res.success ? 'success' : 'error');
+        refreshLayerLibrary();
+    });
+}
+
+// ── save modal ─────────────────────────────────────────────────────────────────
+
+function openSaveModal() {
+    document.getElementById('saveModal').classList.remove('hidden');
+    document.getElementById('saveInput').value = '';
+    setTimeout(function () { document.getElementById('saveInput').focus(); }, 60);
+}
+
+function closeSaveModal() {
+    document.getElementById('saveModal').classList.add('hidden');
+}
+
+function confirmSave() {
+    var name = document.getElementById('saveInput').value.trim();
+    if (!name) return;
+    closeSaveModal();
+    graphEditor.saveCurve(name);
+    toast('Saved.');
+}
+
+function addGraphMenuPrompt() {
+    var name = prompt('Name this graph menu:', 'New menu');
+    if (name === null) return;
+    if (graphEditor.createMenu(name)) toast('Graph menu created.', 'success');
+    else toast('Menu needs a name.', 'error');
+}
+
+
+function transferFlowGraphs() {
+    var page = prompt('Which Flow page/library should I clone?', localStorage.getItem('jx_flow_page') || 'jx.flow');
+    if (page === null) return;
+    page = (page || '').replace(/^\s+|\s+$/g, '') || 'jx.flow';
+    localStorage.setItem('jx_flow_page', page);
+    var curves = readFlowCurves(page);
+    if (!curves.found) {
+        toast('Flow was not found, or no matching graph page exists.', 'error');
+        return;
+    }
+    if (!curves.items.length) {
+        toast('Found Flow, but that page has no graphs to import.', 'error');
+        return;
+    }
+    var added = graphEditor.addCurves(curves.items);
+    toast('Imported ' + added + ' Flow ' + (added === 1 ? 'graph' : 'graphs') + '.', added ? 'success' : 'error');
+}
+
+function readFlowCurves(page) {
+    var out = { found: false, items: [] };
+    try {
+        if (typeof require !== 'function') return out;
+        var fs = require('fs'), path = require('path'), os = require('os');
+        var home = os.homedir();
+        var pageNames = uniqueNames([page, page + '.flow', page + '.jf', page.replace(/\.(flow|jf)$/i, '') + '.flow', page.replace(/\.(flow|jf)$/i, '') + '.jf']);
+        var dirs = [
+            path.join(home, 'Library/Application Support/Aescripts/flow/libraries'),
+            path.join(home, 'Documents/Video/Projects/JerryFlow'),
+            path.join(home, 'Documents/JerryFlow')
+        ];
+        for (var d = 0; d < dirs.length; d++) {
+            for (var n = 0; n < pageNames.length; n++) {
+                var file = path.join(dirs[d], pageNames[n]);
+                if (fs.existsSync(file)) {
+                    out.found = true;
+                    out.items = out.items.concat(parseFlowFile(fs.readFileSync(file, 'utf8'), path.basename(file)));
+                }
+            }
+        }
+        if (!out.found) {
+            var cepDirs = ['/Library/Application Support/Adobe/CEP/extensions/flow-v1.5.2', '/Library/Application Support/Adobe/CEP/extensions/JerryFlow V2'];
+            for (var c = 0; c < cepDirs.length; c++) if (fs.existsSync(cepDirs[c])) out.found = true;
+        }
+    } catch(e) {}
+    return out;
+}
+
+function uniqueNames(names) {
+    var seen = {}, out = [];
+    names.forEach(function(name) { if (name && !seen[name]) { seen[name] = true; out.push(name); } });
+    return out;
+}
+
+function parseFlowFile(text, fallbackName) {
+    var data, out = [];
+    try { data = JSON.parse(text); } catch(e) { return out; }
+    if (!Array.isArray(data)) return out;
+    data.forEach(function(item, i) {
+        var c = null;
+        if (item.value && item.value.length >= 4) c = { name: item.name, vals: item.value };
+        if (item.x1 !== undefined && item.y1 !== undefined && item.x2 !== undefined && item.y2 !== undefined) c = { name: item.name, vals: [item.x1, item.y1, item.x2, item.y2] };
+        if (!c) return;
+        if (c.name === '' && item.active === false) return;
+        out.push({
+            name: c.name || (fallbackName + ' ' + (i + 1)),
+            h1: { x: parseFloat(c.vals[0]), y: parseFloat(c.vals[1]) },
+            h2: { x: parseFloat(c.vals[2]), y: parseFloat(c.vals[3]) }
+        });
+    });
+    return out;
+}
+
+
+// ── project files / v2 imports ─────────────────────────────────────────────────
+
+function mediaKindFromPath(path) {
+    path = String(path || '').split('?')[0];
+    if (PROJECT_MEDIA_TYPES.audio.test(path)) return 'audio';
+    if (PROJECT_MEDIA_TYPES.video.test(path)) return 'video';
+    if (PROJECT_MEDIA_TYPES.image.test(path)) return 'image';
+    return 'file';
+}
+
+function jsEsc(value) { return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+function initProjectFiles() {
+    var dz = document.getElementById('projectDropZone');
+    var input = document.getElementById('projectFileInput');
+    if (dz && input) {
+        dz.addEventListener('click', function () { input.click(); });
+        input.addEventListener('change', function () {
+            for (var i = 0; i < input.files.length; i++) importProjectFile(input.files[i]);
+            input.value = '';
+        });
+        dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('over'); });
+        dz.addEventListener('dragleave', function () { dz.classList.remove('over'); });
+        dz.addEventListener('drop', function (e) {
+            e.preventDefault(); dz.classList.remove('over');
+            var url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+            if (e.dataTransfer.files && e.dataTransfer.files.length) {
+                for (var i = 0; i < e.dataTransfer.files.length; i++) importProjectFile(e.dataTransfer.files[i]);
+            } else if (url) {
+                importWebUrl(url.replace(/\s+/g, '').split('\n')[0]);
+            }
+        });
+    }
+    var addUrl = document.getElementById('btnImportWebUrl');
+    if (addUrl) addUrl.addEventListener('click', function () { importWebUrl((document.getElementById('webImportUrl') || {}).value || ''); });
+    var searchBtn = document.getElementById('btnSystemFileSearch');
+    if (searchBtn) searchBtn.addEventListener('click', searchSystemFiles);
+    var searchInput = document.getElementById('systemFileSearch');
+    if (searchInput) searchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') searchSystemFiles(); });
+}
+
+function importProjectFile(file) {
+    if (!file || !file.path) { toast('This file cannot be imported here.', 'error'); return; }
+    importPathToProject(file.path, mediaKindFromPath(file.path));
+}
+
+function importPathToProject(path, kind) {
+    toast('Adding project file...');
+    cs.evalScript("jx_importProjectMedia('" + jsEsc(path) + "','" + jsEsc(kind || mediaKindFromPath(path)) + "')", function (result) {
+        var res = parseResult(result);
+        if (!res) return;
+        toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) runAutomationsForImport({ path: res.path || path, kind: kind || mediaKindFromPath(path) });
+    });
+}
+
+function importWebUrl(url) {
+    url = String(url || '').replace(/^\s+|\s+$/g, '');
+    if (!/^https?:\/\//i.test(url)) { toast('Paste a direct http media link.', 'error'); return; }
+    var nr = getNodeRequire();
+    if (!nr) { toast('Node is unavailable for downloads.', 'error'); return; }
+    cs.evalScript('jx_getProjectMediaFolder()', function (result) {
+        var res = parseResult(result);
+        if (!res || !res.success || !res.path) return;
+        downloadUrlToFolder(url, res.path, function (err, filePath) {
+            if (err) { toast(err, 'error'); return; }
+            importPathToProject(filePath, mediaKindFromPath(filePath));
+            var field = document.getElementById('webImportUrl');
+            if (field) field.value = '';
+        });
+    });
+}
+
+function downloadUrlToFolder(url, folder, done) {
+    try {
+        var nr = getNodeRequire(), fs = nr('fs'), path = nr('path'), http = nr(url.indexOf('https:') === 0 ? 'https' : 'http');
+        if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
+        var clean = decodeURIComponent((url.split('/').pop() || 'web-media').split('?')[0]).replace(/[^a-z0-9._-]/gi, '_');
+        if (!/\.[a-z0-9]{2,5}$/i.test(clean)) clean += '.media';
+        var target = path.join(folder, Date.now() + '_' + clean);
+        var file = fs.createWriteStream(target);
+        http.get(url, function (response) {
+            if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) { file.close(); try { fs.unlinkSync(target); } catch(e) {} downloadUrlToFolder(response.headers.location, folder, done); return; }
+            if (response.statusCode !== 200) { file.close(); try { fs.unlinkSync(target); } catch(e) {} done('Download failed: ' + response.statusCode); return; }
+            response.pipe(file);
+            file.on('finish', function () { file.close(function () { done(null, target); }); });
+        }).on('error', function () { file.close(); try { fs.unlinkSync(target); } catch(e) {} done('Download failed.'); });
+    } catch(e) { done('Download failed.'); }
+}
+
+function searchSystemFiles() {
+    var q = (document.getElementById('systemFileSearch') || {}).value || '';
+    q = q.replace(/^\s+|\s+$/g, '');
+    if (q.length < 2) { toast('Type at least 2 characters.', 'error'); return; }
+    var list = document.getElementById('systemFileResults');
+    if (list) list.innerHTML = '<div class="graph-empty">Searching...</div>';
+    var nr = getNodeRequire();
+    if (!nr) { toast('Node is unavailable for search.', 'error'); return; }
+    try {
+        var cp = nr('child_process');
+        cp.execFile('/usr/bin/mdfind', ['kMDItemFSName == "*' + q.replace(/"/g, '') + '*"c'], { timeout: 8000, maxBuffer: 1024 * 1024 }, function (err, stdout) {
+            var results = (stdout || '').split('\n').filter(function (line) { return line && mediaKindFromPath(line) !== 'file'; }).slice(0, 18);
+            renderSystemFileResults(results);
+        });
+    } catch(e) { toast('Search failed.', 'error'); }
+}
+
+function renderSystemFileResults(results) {
+    var list = document.getElementById('systemFileResults');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!results.length) { list.innerHTML = '<div class="graph-empty">No media files found.</div>'; return; }
+    results.forEach(function (path) {
+        var row = document.createElement('button');
+        row.className = 'file-result';
+        row.innerHTML = '<span>' + escapeHtml(path.split('/').pop()) + '</span><em>' + escapeHtml(path) + '</em>';
+        row.addEventListener('click', function () { importPathToProject(path, mediaKindFromPath(path)); });
+        list.appendChild(row);
+    });
+}
+
+// ── automations ────────────────────────────────────────────────────────────────
+
+function defaultAutomations() {
+    return [
+        { id: 'auto-beats', name: 'Auto-mark beats for added audio', trigger: 'audio-imported', action: 'beat-markers', enabled: false, builtin: true },
+        { id: 'auto-label-media', name: 'Auto-label imported media', trigger: 'any-imported', action: 'auto-label', enabled: false, builtin: true },
+        { id: 'auto-fit-video', name: 'Fit comp to added video', trigger: 'video-imported', action: 'fit-comp', enabled: false, builtin: true },
+        { id: 'auto-clean-names', name: 'Clean messy imported filenames', trigger: 'any-imported', action: 'rename-clean', enabled: false, builtin: true },
+        { id: 'auto-open-video', name: 'Open new videos in viewer', trigger: 'video-imported', action: 'open-footage', enabled: false, builtin: true },
+        { id: 'auto-open-image', name: 'Open new images in viewer', trigger: 'image-imported', action: 'open-footage', enabled: false, builtin: true },
+        { id: 'auto-proxy-folder', name: 'Group new media in proxy folder', trigger: 'any-imported', action: 'make-proxy-folder', enabled: false, builtin: true },
+        { id: 'auto-stretch-comp', name: 'Match comp length to videos', trigger: 'video-imported', action: 'stretch-comp', enabled: false, builtin: true },
+        { id: 'auto-start-marker', name: 'Add start marker to imports', trigger: 'any-imported', action: 'add-start-marker', enabled: false, builtin: true }
+    ];
+}
+function getAutomations() {
+    var defaults = defaultAutomations();
+    try {
+        var saved = JSON.parse(localStorage.getItem(AUTOMATION_KEY) || 'null');
+        if (saved && saved.length) {
+            var byId = {};
+            defaults.forEach(function (item) { byId[item.id] = item; });
+            saved.forEach(function (item) { if (item && item.id) byId[item.id] = item; });
+            var merged = defaults.map(function (item) { return byId[item.id]; });
+            saved.forEach(function (item) { if (item && item.id && !defaults.some(function (base) { return base.id === item.id; })) merged.push(item); });
+            return merged;
+        }
+    } catch(e) {}
+    return defaults;
+}
+
+function saveAutomations(items) { localStorage.setItem(AUTOMATION_KEY, JSON.stringify(items)); }
+
+function initAutomations() {
+    migrateAutomationDefaults();
+    renderAutomations();
+    var add = document.getElementById('btnAddAutomation');
+    if (add) add.addEventListener('click', addAutomationRule);
+}
+
+function migrateAutomationDefaults() {
+    if (localStorage.getItem('jx_automations_v2_defaults_off') === '1') return;
+    var items = getAutomations().map(function (item) {
+        if (item.builtin) item.enabled = false;
+        return item;
+    });
+    saveAutomations(items);
+    localStorage.setItem('jx_automations_v2_defaults_off', '1');
+}
+
+function openAutomationsView() {
+    closeSettings(); closePresetsView(); closeDevView(); closeLayerLibView(); closeNotesView();
+    renderAutomations();
+    document.getElementById('automationsView').classList.add('open');
+}
+
+function closeAutomationsView() {
+    var view = document.getElementById('automationsView');
+    if (view) view.classList.remove('open');
+}
+
+function renderAutomations() {
+    var list = document.getElementById('automationList');
+    if (!list) return;
+    var items = getAutomations();
+    list.innerHTML = '';
+    items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'automation-row';
+        row.innerHTML = '<label class="automation-main"><input type="checkbox" ' + (item.enabled ? 'checked' : '') + '><span><strong>' + escapeHtml(item.name) + '</strong><em>' + escapeHtml(formatAutomationLine(item)) + '</em></span></label>' + (item.builtin ? '' : '<button class="automation-delete">Delete</button>');
+        row.querySelector('input').addEventListener('change', function (e) { item.enabled = e.target.checked; saveAutomations(items); });
+        var del = row.querySelector('.automation-delete');
+        if (del) del.addEventListener('click', function () { saveAutomations(items.filter(function (x) { return x.id !== item.id; })); renderAutomations(); });
+        list.appendChild(row);
+    });
+}
+
+function addAutomationRule() {
+    var trigger = document.getElementById('automationTrigger').value;
+    var action = document.getElementById('automationAction').value;
+    var items = getAutomations();
+    items.push({ id: 'custom_' + Date.now(), name: titleCaseWords(trigger.replace(/-/g, ' ') + ' to ' + action.replace(/-/g, ' ')), trigger: trigger, action: action, enabled: false, builtin: false });
+    saveAutomations(items);
+    renderAutomations();
+    toast('Automation added.', 'success');
+}
+
+function runAutomationsForImport(file) {
+    var trigger = file.kind + '-imported';
+    getAutomations().forEach(function (rule) {
+        if (!rule.enabled) return;
+        if (rule.trigger !== trigger && rule.trigger !== 'any-imported') return;
+        if (rule.action === 'beat-markers' && file.kind === 'audio') detectBeatsForFile(file.path);
+        if (rule.action === 'auto-label') run("jx_autoLabelImportedItem('" + jsEsc(file.path) + "','" + jsEsc(file.kind) + "')");
+        if (rule.action === 'fit-comp' && file.kind === 'video') run("jx_fitCompToMedia('" + jsEsc(file.path) + "')");
+        if (rule.action === 'rename-clean') run("jx_cleanImportedItemName('" + jsEsc(file.path) + "')");
+        if (rule.action === 'open-footage') run("jx_openImportedItem('" + jsEsc(file.path) + "')");
+        if (rule.action === 'make-proxy-folder') run("jx_groupImportedItem('" + jsEsc(file.path) + "','Proxies')");
+        if (rule.action === 'stretch-comp' && file.kind === 'video') run("jx_stretchCompToMedia('" + jsEsc(file.path) + "')");
+        if (rule.action === 'add-start-marker') run("jx_addImportStartMarker('" + jsEsc(file.path) + "')");
+    });
+}
+
+function formatAutomationLine(item) {
+    return titleCaseWords(item.trigger.replace(/-/g, ' ') + ' to ' + item.action.replace(/-/g, ' '));
+}
+
+function titleCaseWords(value) {
+    return String(value || '').replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+}
+
+function initNotes() {
+    var input = document.getElementById('notesInput');
+    if (!input) return;
+    input.value = localStorage.getItem(NOTES_KEY) || '';
+    input.addEventListener('input', function () {
+        localStorage.setItem(NOTES_KEY, input.value);
+        renderNotesSavedState('Saved locally.');
+    });
+    var clear = document.getElementById('clearNotesBtn');
+    if (clear) clear.addEventListener('click', function () {
+        input.value = '';
+        localStorage.removeItem(NOTES_KEY);
+        renderNotesSavedState('Notes cleared.');
+    });
+}
+
+function renderNotesSavedState(message) {
+    var state = document.getElementById('notesSavedState');
+    if (state) state.textContent = message || 'Saved locally.';
+}
+
+function openNotesView() {
+    closeSettings(); closePresetsView(); closeDevView(); closeLayerLibView(); closeAutomationsView();
+    var view = document.getElementById('notesView');
+    if (view) view.classList.add('open');
+}
+
+function closeNotesView() {
+    var view = document.getElementById('notesView');
+    if (view) view.classList.remove('open');
+}
+
+function detectBeatsForFile(filePath) {
+    loadAudioBuffer(filePath, function(err, buf) {
+        if (err || !buf) { toast('Could not auto-mark beats.', 'error'); return; }
+        runBPMDetection(buf);
+    });
+}
+
+// ── graph prompt/profile ───────────────────────────────────────────────────────
+
+function initCurveAI() {
+    var chips = document.getElementById('curveAiExamples');
+    if (!chips) return;
+    chips.innerHTML = '';
+    renderCurveAiMeta();
+    pickCurveLaunchSuggestions().forEach(function (example) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'curve-ai-chip';
+        btn.textContent = example;
+        btn.addEventListener('click', function () {
+            var input = document.getElementById('graphPrompt');
+            if (input) input.value = example;
+            generateGraphFromPrompt();
+        });
+        chips.appendChild(btn);
+    });
+}
+
+function pickCurveLaunchSuggestions() {
+    var pool = (window.JX_CURVE_AI_SUGGESTION_POOL && window.JX_CURVE_AI_SUGGESTION_POOL.length ? window.JX_CURVE_AI_SUGGESTION_POOL : window.JX_CURVE_AI_EXAMPLES) || [];
+    var unique = [];
+    pool.forEach(function (item) {
+        if (item && unique.indexOf(item) === -1) unique.push(item);
+    });
+    for (var i = unique.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = unique[i];
+        unique[i] = unique[j];
+        unique[j] = temp;
+    }
+    return unique.slice(0, 12);
+}
+
+function generateCurveFromWords(text) {
+    if (window.JXCurveAI && typeof window.JXCurveAI.predict === 'function') return window.JXCurveAI.predict(text);
+    return { curve: { h1: { x: 0.35, y: 0 }, h2: { x: 0.65, y: 1 } }, summary: 'fallback', confidence: 10, traits: {} };
+}
+
+function renderCurveAiMeta() {
+    var meta = document.getElementById('curveAiMeta');
+    if (!meta) return;
+    if (!window.JXCurveAI || !window.JXCurveAI.metadata) {
+        meta.textContent = 'Curve model unavailable - using fallback.';
+        return;
+    }
+    var m = window.JXCurveAI.metadata;
+    var shards = (window.JX_CURVE_AI_WEIGHT_SHARDS || []).length;
+    meta.textContent = '';
+}
+
+function renderCurveAiResult(result) {
+    renderCurveAiMeta();
+    var hint = document.getElementById('graphPromptHint');
+    var meter = document.getElementById('curveAiMeter');
+    if (hint) hint.textContent = '';
+    if (meter) {
+        var bar = meter.querySelector('span');
+        if (bar) bar.style.width = Math.max(8, result.confidence) + '%';
+        meter.title = result.summary;
+    }
+}
+
+function generateGraphFromPrompt() {
+    var prompt = (document.getElementById('graphPrompt') || {}).value || '';
+    if (!prompt.replace(/\s/g, '')) { toast('Describe the graph first.', 'error'); return; }
+    var result = generateCurveFromWords(prompt);
+    graphEditor.setCurve(result.curve);
+    renderCurveAiResult(result);
+    toast('Graph generated.', 'success');
+}
+
+function saveDescribedGraph() {
+    var prompt = ((document.getElementById('graphPrompt') || {}).value || 'Curve Graph').replace(/^\s+|\s+$/g, '');
+    var result = generateCurveFromWords(prompt);
+    graphEditor.setCurve(result.curve);
+    renderCurveAiResult(result);
+    graphEditor.saveCurve(('Curve · ' + prompt).substr(0, 40));
+    toast('Curve graph saved.', 'success');
+}
+
+function setProfileImage(file) {
+    if (!window.JXProfileImage) { toast('Profile image helper missing.', 'error'); return; }
+    JXProfileImage.read(file, function (err, dataUrl) {
+        if (err || !dataUrl) { toast((err && err.message) || 'Profile picture failed.', 'error'); return; }
+        if (window.JXProfileCropper && JXProfileCropper.open(dataUrl)) return;
+        if (!JXProfileImage.setDataUrl(dataUrl)) { toast('That image format is not supported.', 'error'); return; }
+        updateProfileFooter();
+        if (window.JXUIDebug) JXUIDebug.log('profile image updated');
+        toast('Profile picture updated.', 'success');
+    });
+}
+
+function clearProfileImage() {
+    if (window.JXProfileImage) JXProfileImage.clear();
+    updateProfileFooter();
+    toast('Profile picture cleared.');
+}
+
+function updateProfileFooter() {
+    var name = localStorage.getItem('jx_username') || 'jx editor';
+    var img = window.JXProfileImage ? JXProfileImage.getDataUrl() : (localStorage.getItem('jx_profile_image') || '');
+    var initials = (name.substr(0, 2) || 'jx').toLowerCase();
+    var n = document.getElementById('profileName');
+    var v = document.getElementById('profileVersion');
+    var a = document.getElementById('profileAvatar');
+    var onboardAvatar = document.getElementById('onboardAvatarPreview');
+    if (n) n.textContent = name;
+    if (v) v.textContent = 'v2';
+    if (window.JXProfileImage) JXProfileImage.applyToElements(name);
+    else [a, onboardAvatar].forEach(function (el) {
+        if (!el) return;
+        el.textContent = img ? '' : initials;
+        el.style.backgroundImage = img ? 'url(' + img + ')' : '';
+    });
+    var uploadPreview = document.getElementById('profileUploadPreview');
+    if (uploadPreview) uploadPreview.style.backgroundImage = img ? 'url(' + img + ')' : '';
+    if (uploadPreview) uploadPreview.classList.toggle('has-image', !!img);
+}
+
+// ── settings ───────────────────────────────────────────────────────────────────
+
+function openSettings() {
+    closePresetsView();
+    closeDevView();
+    closeLayerLibView();
+    closeAutomationsView(); closeNotesView();
+    document.getElementById('settingsView').classList.add('open');
+    renderSettingsPreset();
+}
+
+function closeSettings() {
+    document.getElementById('settingsView').classList.remove('open');
+}
+
+function renderSettingsPreset() {
+    var el = document.getElementById('settingsPath');
+    if (loadedPresetPath) {
+        el.textContent = loadedPresetPath.split('/').pop().split('\\').pop();
+        el.title = loadedPresetPath;
+    } else {
+        el.textContent = 'None loaded';
+        el.title = '';
+    }
+}
+
+// ── section visibility / layout ────────────────────────────────────────────────
+
+function initSectionVisibility() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('jx_sections') || '{}'); } catch(e) {}
+
+    document.querySelectorAll('.section-vis-cb').forEach(function(cb) {
+        var key = cb.dataset.section;
+        var visible = saved[key] !== false;
+        cb.checked = visible;
+        setSectionVisible(key, visible);
+        cb.addEventListener('change', function() {
+            setSectionVisible(key, cb.checked);
+            saveSectionVisibility();
+        });
+    });
+}
+
+function initSectionControls() {
+    applySectionOrder();
+    var collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem('jx_section_collapsed') || '{}'); } catch(e) {}
+
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        var key = section.dataset.section;
+        var hd = section.querySelector('.section-hd');
+        if (!hd) return;
+        section.setAttribute('draggable', 'true');
+        section.classList.toggle('collapsed', collapsed[key] === true);
+        if (!hd.querySelector('.section-arrow')) {
+            var arrow = document.createElement('span');
+            arrow.className = 'section-arrow';
+            arrow.textContent = '›';
+            hd.insertBefore(arrow, hd.firstChild);
+        }
+        if (!hd.querySelector('.section-drag')) {
+            var drag = document.createElement('span');
+            drag.className = 'section-drag';
+            drag.textContent = '⋮⋮';
+            hd.appendChild(drag);
+        }
+        hd.title = 'Click to collapse. Right-click to hide. Drag to reorder.';
+        hd.addEventListener('click', function(e) {
+            if (e.target.closest('button, input, select, a')) return;
+            section.classList.toggle('collapsed');
+            saveSectionCollapse();
+        });
+        hd.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            setSectionVisible(key, false);
+            var cb = document.querySelector('.section-vis-cb[data-section="' + key + '"]');
+            if (cb) cb.checked = false;
+            saveSectionVisibility();
+            toast((SECTION_LABELS[key] || key) + ' hidden. Re-enable in Settings.');
+        });
+        section.addEventListener('dragstart', function(e) {
+            e.dataTransfer.setData('text/plain', key);
+            section.classList.add('dragging');
+        });
+        section.addEventListener('dragend', function() {
+            section.classList.remove('dragging');
+            saveSectionOrder();
+        });
+        section.addEventListener('dragover', function(e) {
+            var dragging = document.querySelector('section.dragging');
+            if (!dragging || dragging === section) return;
+            e.preventDefault();
+            var box = section.getBoundingClientRect();
+            var after = e.clientY > box.top + box.height / 2;
+            section.parentNode.insertBefore(dragging, after ? section.nextSibling : section);
+        });
+    });
+}
+
+function setSectionVisible(key, visible) {
+    var el = document.querySelector('section[data-section="' + key + '"]');
+    if (el) el.style.display = visible ? '' : 'none';
+}
+
+function saveSectionVisibility() {
+    var state = {};
+    document.querySelectorAll('.section-vis-cb').forEach(function(cb) {
+        state[cb.dataset.section] = cb.checked;
+    });
+    localStorage.setItem('jx_sections', JSON.stringify(state));
+}
+
+function saveSectionCollapse() {
+    var state = {};
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        state[section.dataset.section] = section.classList.contains('collapsed');
+    });
+    localStorage.setItem('jx_section_collapsed', JSON.stringify(state));
+}
+
+function applySectionOrder() {
+    var order;
+    try { order = JSON.parse(localStorage.getItem('jx_section_order') || '[]'); } catch(e) { order = []; }
+    if (!order || !order.length) order = SECTION_KEYS;
+    var area = document.querySelector('.scroll-area');
+    if (!area) return;
+    order.concat(SECTION_KEYS).forEach(function(key) {
+        var section = area.querySelector('section[data-section="' + key + '"]');
+        if (section) area.appendChild(section);
+    });
+}
+
+function saveSectionOrder() {
+    var order = [];
+    document.querySelectorAll('.scroll-area > section[data-section]').forEach(function(section) {
+        order.push(section.dataset.section);
+    });
+    localStorage.setItem('jx_section_order', JSON.stringify(order));
+}
+
+// ── tool search ────────────────────────────────────────────────────────────────
+
+function initToolSearch() {
+    document.querySelectorAll('[data-vis-item]').forEach(function(el) {
+        el.dataset.searchText = searchableText(el);
+    });
+    var input = document.getElementById('toolSearch');
+    if (input) input.addEventListener('input', applyToolSearch);
+}
+
+function toggleToolSearch() {
+    var bar = document.getElementById('searchBar');
+    var input = document.getElementById('toolSearch');
+    if (!bar || !input) return;
+    bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) {
+        input.focus();
+        input.select();
+    } else {
+        clearToolSearch();
+    }
+}
+
+function clearToolSearch() {
+    var input = document.getElementById('toolSearch');
+    if (input) input.value = '';
+    applyToolSearch();
+}
+
+function applyToolSearch() {
+    var input = document.getElementById('toolSearch');
+    var query = normalizeSearch(input ? input.value : '');
+    document.body.classList.toggle('searching', !!query);
+    document.querySelectorAll('section[data-section]').forEach(function(section) {
+        var hasMatch = !query;
+        section.querySelectorAll('[data-vis-item]').forEach(function(el) {
+            var text = el.dataset.searchText || searchableText(el);
+            var match = !query || fuzzyMatch(query, text);
+            el.classList.toggle('search-hidden', !match);
+            if (match) hasMatch = true;
+        });
+        section.classList.toggle('search-empty', !hasMatch);
+        if (query && hasMatch) section.classList.remove('collapsed');
+    });
+}
+
+function searchableText(el) {
+    var text = (el.textContent || '') + ' ' + (el.id || '') + ' ' + (el.dataset.visItem || '');
+    return normalizeSearch(text);
+}
+
+function normalizeSearch(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '');
+}
+
+function fuzzyMatch(query, text) {
+    if (!query) return true;
+    if (text.indexOf(query) !== -1) return true;
+    var words = text.split(' ');
+    var parts = query.split(' ');
+    for (var p = 0; p < parts.length; p++) {
+        var ok = false;
+        for (var w = 0; w < words.length; w++) {
+            if (words[w].indexOf(parts[p]) !== -1 || levenshtein(parts[p], words[w]) <= Math.max(1, Math.floor(parts[p].length / 3))) { ok = true; break; }
+        }
+        if (!ok) return false;
+    }
+    return true;
+}
+
+function levenshtein(a, b) {
+    var m = [], i, j;
+    for (i = 0; i <= b.length; i++) m[i] = [i];
+    for (j = 0; j <= a.length; j++) m[0][j] = j;
+    for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+            m[i][j] = b.charAt(i - 1) === a.charAt(j - 1) ? m[i - 1][j - 1] : Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
+        }
+    }
+    return m[b.length][a.length];
+}
+
+// ── beat detection ─────────────────────────────────────────────────────────────
+
+var beatMode = localStorage.getItem('jx_beat_mode') || 'bpm';
+
+function initBeatMode() {
+    document.querySelectorAll('.beat-mode-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { setBeatMode(btn.dataset.mode); });
+    });
+    setBeatMode(beatMode);
+
+    function liveRange(inputId, valId) {
+        var inp = document.getElementById(inputId);
+        var val = document.getElementById(valId);
+        if (!inp || !val) return;
+        val.textContent = inp.value;
+        inp.addEventListener('input', function() { val.textContent = inp.value; });
+    }
+    liveRange('bpmSensitivity', 'bpmSensVal');
+    liveRange('freqBassThresh',   'freqBassThreshVal');
+    liveRange('freqTrebleThresh', 'freqTrebleThreshVal');
+
+    function syncBand(cbId, bodyId) {
+        var cb   = document.getElementById(cbId);
+        var body = document.getElementById(bodyId);
+        if (!cb || !body) return;
+        body.classList.toggle('disabled', !cb.checked);
+        cb.addEventListener('change', function() { body.classList.toggle('disabled', !cb.checked); });
+    }
+    syncBand('freqBassEnable',   'freqBassBody');
+    syncBand('freqTrebleEnable', 'freqTrebleBody');
+
+    document.getElementById('btnDetectBpm').addEventListener('click',  detectBeats);
+    document.getElementById('btnDetectFreq').addEventListener('click', detectBeats);
+    document.getElementById('btnTapTempo').addEventListener('click', tapTempo);
+    document.getElementById('btnApplyTap').addEventListener('click', applyTappedBpm);
+}
+
+function setBeatMode(mode) {
+    beatMode = mode;
+    var bp = document.getElementById('beatPanel_bpm');
+    var fp = document.getElementById('beatPanel_freq');
+    // respect vis-hidden - don't un-hide a panel that the user has hidden via advanced vis
+    if (bp) bp.style.display = (mode === 'bpm'  && !bp.classList.contains('vis-hidden')) ? '' : 'none';
+    if (fp) fp.style.display = (mode === 'freq' && !fp.classList.contains('vis-hidden')) ? '' : 'none';
+    document.querySelectorAll('.beat-mode-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    localStorage.setItem('jx_beat_mode', mode);
+}
+
+function detectBeats() {
+    toast('Finding audio layer...');
+    cs.evalScript('jx_getAudioLayerPath()', function(result) {
+        var res = parseResult(result);
+        if (res && res.success) {
+            toast('Analysing...');
+            loadAudioBuffer(res.message, function(err, buf) {
+                if (err || !buf) { toast('Could not load audio.', 'error'); return; }
+                if (beatMode === 'bpm') runBPMDetection(buf);
+                else                   runFreqDetection(buf);
+            });
+        } else {
+            toast('No audio layer found in comp.', 'error');
+        }
+    });
+}
+
+function getNode() {
+    try {
+        if (typeof cep_node !== 'undefined' && cep_node && cep_node.require) return cep_node.require;
+    } catch(e) {}
+    try { if (typeof window.require === 'function') return window.require; } catch(e) {}
+    try { if (typeof require === 'function') return require; } catch(e) {}
+    return null;
+}
+
+// --- Tap Tempo ---
+var _tapTimes = [], _tapTimer = null, _lastTappedBpm = 0;
+
+function tapTempo() {
+    var now = Date.now();
+    if (_tapTimer) clearTimeout(_tapTimer);
+    _tapTimer = setTimeout(function() { _tapTimes = []; updateTapDisplay(); }, 2500);
+
+    if (_tapTimes.length > 0 && now - _tapTimes[_tapTimes.length - 1] > 2400) _tapTimes = [];
+    _tapTimes.push(now);
+
+    if (_tapTimes.length >= 2) {
+        var gaps = [];
+        for (var i = 1; i < _tapTimes.length; i++) gaps.push(_tapTimes[i] - _tapTimes[i - 1]);
+        var avg = gaps.reduce(function(s, v) { return s + v; }, 0) / gaps.length;
+        _lastTappedBpm = Math.round(60000 / avg);
+    }
+    updateTapDisplay();
+}
+
+function updateTapDisplay() {
+    var el = document.getElementById('tapDisplay');
+    var btn = document.getElementById('btnApplyTap');
+    if (!el) return;
+    if (_lastTappedBpm > 0 && _tapTimes.length >= 2) {
+        el.textContent = _lastTappedBpm + ' BPM';
+        if (btn) btn.style.display = '';
+    } else {
+        el.textContent = _tapTimes.length === 1 ? 'Tap…' : '';
+        if (btn) btn.style.display = 'none';
+    }
+}
+
+function applyTappedBpm() {
+    if (!_lastTappedBpm) return;
+    run('jx_addBeatMarkers(' + _lastTappedBpm + ', 0)');
+}
+
+function copyGraphCSS() {
+    if (!graphEditor) return;
+    var c = graphEditor.getCurve();
+    var txt = 'cubic-bezier(' + [c.h1.x, c.h1.y, c.h2.x, c.h2.y].map(function(n) { return Math.round(n * 1000) / 1000; }).join(', ') + ')';
+    copyText(txt);
+    toast('Copied: ' + txt);
+}
+
+function loadAudioBuffer(filePath, cb) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { cb('no AudioContext', null); return; }
+
+    var nr = getNode();
+    if (nr) {
+        var fs = nr('fs');
+        fs.readFile(filePath, function(err, data) {
+            if (err) { cb('read error', null); return; }
+            // Copy into a fresh ArrayBuffer - Node.js Buffers share a pool ArrayBuffer
+            // whose byteOffset may be non-zero, which causes decodeAudioData to reject it.
+            var ab = new ArrayBuffer(data.byteLength);
+            new Uint8Array(ab).set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+            var ctx = new AC();
+            ctx.decodeAudioData(ab, function(decoded) {
+                ctx.close(); cb(null, decoded);
+            }, function() { ctx.close(); cb('decode', null); });
+        });
+        return;
+    }
+
+    var norm = filePath.replace(/\\/g, '/');
+    var url  = norm.indexOf('file://') === 0 ? norm
+             : norm.charAt(0) === '/'        ? 'file://' + norm
+             :                                 'file:///' + norm;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = function() {
+        var ctx = new AC();
+        ctx.decodeAudioData(xhr.response, function(decoded) {
+            ctx.close(); cb(null, decoded);
+        }, function() { ctx.close(); cb('decode', null); });
+    };
+    xhr.onerror = function() { cb('load', null); };
+    xhr.send();
+}
+
+function getMono(buf) {
+    if (buf.numberOfChannels === 1) return buf.getChannelData(0);
+    var a = buf.getChannelData(0), b = buf.getChannelData(1);
+    var mono = new Float32Array(a.length);
+    for (var i = 0; i < a.length; i++) mono[i] = (a[i] + b[i]) * 0.5;
+    return mono;
+}
+
+function lowPassFilter(samples, sr, cutoffHz) {
+    var dt = 1.0 / sr, rc = 1.0 / (2 * Math.PI * cutoffHz);
+    var alpha = dt / (rc + dt);
+    var out = new Float32Array(samples.length);
+    out[0] = samples[0];
+    for (var i = 1; i < samples.length; i++) out[i] = out[i-1] + alpha * (samples[i] - out[i-1]);
+    return out;
+}
+
+function highPassFilter(samples, sr, cutoffHz) {
+    var dt = 1.0 / sr, rc = 1.0 / (2 * Math.PI * cutoffHz);
+    var alpha = rc / (rc + dt);
+    var out = new Float32Array(samples.length);
+    out[0] = samples[0];
+    for (var i = 1; i < samples.length; i++) out[i] = alpha * (out[i-1] + samples[i] - samples[i-1]);
+    return out;
+}
+
+function runBPMDetection(buf) {
+    var sensitivity = parseInt(document.getElementById('bpmSensitivity').value, 10) || 75;
+    var sr   = buf.sampleRate;
+    var mono = getMono(buf);
+
+    var lp1 = lowPassFilter(mono, sr, 200);
+    var env  = new Float32Array(lp1.length);
+    for (var i = 0; i < lp1.length; i++) env[i] = Math.abs(lp1[i]);
+    var lp2 = lowPassFilter(env, sr, 20);
+
+    var dsStep = Math.max(1, Math.round(sr / 100));
+    var ds = [];
+    for (var i = 0; i < lp2.length; i += dsStep) ds.push(lp2[i]);
+    var dsSr = sr / dsStep;
+
+    var odf = [0];
+    for (var i = 1; i < ds.length; i++) odf.push(Math.max(0, ds[i] - ds[i-1]));
+
+    var minLag = Math.max(1, Math.round(dsSr * 60.0 / 200));
+    var maxLag = Math.min(ds.length - 1, Math.round(dsSr * 60.0 / 60));
+    var bestCorr = -1, bestLag = Math.round(dsSr * 60.0 / 120);
+    for (var lag = minLag; lag <= maxLag; lag++) {
+        var corr = 0, n = odf.length - lag;
+        for (var i = 0; i < n; i++) corr += odf[i] * odf[i + lag];
+        if (corr > bestCorr) { bestCorr = corr; bestLag = lag; }
+    }
+    var bpm           = Math.round(dsSr * 60.0 / bestLag);
+    var beatPeriodSec = bestLag / dsSr;
+
+    var bestPhase = 0, bestScore = -1;
+    for (var phase = 0; phase < bestLag && phase < odf.length; phase++) {
+        var score = 0;
+        for (var k = phase; k < odf.length; k += bestLag) score += odf[k];
+        if (score > bestScore) { bestScore = score; bestPhase = phase; }
+    }
+
+    var maxODF = 0;
+    for (var i = 0; i < odf.length; i++) if (odf[i] > maxODF) maxODF = odf[i];
+    var thresh = maxODF * (1.0 - sensitivity / 100.0) * 0.8;
+
+    var times = [];
+    var firstBeatSec = bestPhase / dsSr;
+    var winFrames    = Math.round(bestLag * 0.15);
+    for (var t = firstBeatSec; t <= buf.duration + 0.001; t += beatPeriodSec) {
+        var frame    = Math.round(t * dsSr);
+        var localMax = 0;
+        for (var f = Math.max(0, frame - winFrames); f <= Math.min(odf.length - 1, frame + winFrames); f++) {
+            if (odf[f] > localMax) localMax = odf[f];
+        }
+        if (localMax >= thresh) times.push(parseFloat(t.toFixed(3)));
+    }
+
+    // If the threshold filtered out everything, fall back to the full computed grid.
+    var fullGrid = false;
+    if (!times.length) {
+        fullGrid = true;
+        for (var t2 = firstBeatSec; t2 <= buf.duration + 0.001; t2 += beatPeriodSec) {
+            times.push(parseFloat(t2.toFixed(3)));
+        }
+    }
+
+    var resEl = document.getElementById('bpmResult');
+    if (resEl) resEl.textContent = 'Detected: ' + bpm + ' BPM - ' + times.length + ' markers' + (fullGrid ? ' (full grid)' : '');
+
+    var json = JSON.stringify(JSON.stringify(times));
+    run('jx_placeBeatsFromTimes(' + json + ')');
+}
+
+function onsetDetect(signal, sr, threshPct, minGapSec) {
+    var winLen = 512, hopLen = 256;
+    var hopSec = hopLen / sr;
+    var energies = [];
+    for (var i = 0; i + winLen <= signal.length; i += hopLen) {
+        var sum = 0;
+        for (var j = i; j < i + winLen; j++) sum += signal[j] * signal[j];
+        energies.push(Math.sqrt(sum / winLen));
+    }
+    var look = 20;
+    var minGapFrames = Math.max(1, Math.round(minGapSec / hopSec));
+    var times = [];
+    var lastBeat = -minGapFrames;
+    for (var f = look; f < energies.length; f++) {
+        var slice = energies.slice(Math.max(0, f - look), f);
+        var mean  = 0;
+        for (var k = 0; k < slice.length; k++) mean += slice[k];
+        mean /= slice.length || 1;
+        var mult = 1.0 + (threshPct / 100.0) * 2.0;
+        if (energies[f] > mean * mult && (f - lastBeat) >= minGapFrames) {
+            times.push(parseFloat((f * hopSec).toFixed(3)));
+            lastBeat = f;
+        }
+    }
+    return times;
+}
+
+function runFreqDetection(buf) {
+    var mono = getMono(buf);
+    var sr   = buf.sampleRate;
+
+    var bassEnabled   = document.getElementById('freqBassEnable').checked;
+    var trebleEnabled = document.getElementById('freqTrebleEnable').checked;
+    var bassThresh    = parseInt(document.getElementById('freqBassThresh').value,   10) || 55;
+    var trebleThresh  = parseInt(document.getElementById('freqTrebleThresh').value, 10) || 70;
+    var bassGap       = (parseFloat(document.getElementById('freqBassGap').value)   || 200) / 1000;
+    var trebleGap     = (parseFloat(document.getElementById('freqTrebleGap').value) || 100) / 1000;
+
+    var combined = [];
+
+    if (bassEnabled) {
+        var bassSignal = lowPassFilter(mono, sr, 250);
+        var bassTimes  = onsetDetect(bassSignal, sr, bassThresh, bassGap);
+        for (var i = 0; i < bassTimes.length; i++) combined.push({ t: bassTimes[i], label: 'Bass' });
+    }
+    if (trebleEnabled) {
+        var trebleSignal = highPassFilter(mono, sr, 4000);
+        var trebleTimes  = onsetDetect(trebleSignal, sr, trebleThresh, trebleGap);
+        for (var i = 0; i < trebleTimes.length; i++) combined.push({ t: trebleTimes[i], label: 'Treble' });
+    }
+
+    if (!combined.length) { toast('No beats detected - try lowering the threshold.', 'error'); return; }
+    combined.sort(function(a, b) { return a.t - b.t; });
+
+    var json = JSON.stringify(JSON.stringify(combined));
+    run('jx_placeBeatsFromTimes(' + json + ')');
+}
+
+// ── helpers ────────────────────────────────────────────────────────────────────
+
+function run(script) {
+    cs.evalScript(script, function (result) {
+        var res = parseResult(result);
+        var ok  = !!(res && res.success);
+        if (!ok) lastDevError = (res && res.message) ? res.message : String(result || 'Unknown error');
+        actionsRun++;
+        var d = new Date();
+        var t = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        // store just the function name for readability
+        var scriptName = script.split('(')[0];
+        actionLog.unshift({ t: t, script: scriptName, ok: ok });
+        if (actionLog.length > ACTION_LOG_MAX) actionLog.length = ACTION_LOG_MAX;
+        if (res) toast(res.message, ok ? 'success' : 'error');
+        var dv = document.getElementById('devView');
+        if (dv && dv.classList.contains('open')) renderDevView();
+    });
+}
+
+function parseResult(raw) {
+    try { return JSON.parse(raw); } catch (e) { lastDevError = String(raw || e); toast('Something went wrong.', 'error'); return null; }
+}
+
+function shortDate() {
+    var d = new Date();
+    return d.getDate() + '/' + (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
+}
+
+// ── toast ──────────────────────────────────────────────────────────────────────
+
+var toastTimer = null;
+
+function toast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = 'toast ' + (type || '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.add('out'); }, 2500);
+}

@@ -1,0 +1,49 @@
+/* v2 simple surface: calmer by default, details appear when needed */
+.header-actions .icon-btn {
+    opacity: 0.72;
+}
+.header-actions .icon-btn:hover,
+.header-actions .icon-btn.active {
+    opacity: 1;
+}
+.section-drag {
+    opacity: 0;
+    transition: opacity 0.14s ease;
+}
+.section-hd:hover .section-drag {
+    opacity: 0.45;
+}
+.section-body {
+    padding-top: 8px;
+}
+.section-divider {
+    opacity: 0.55;
+}
+.input-row {
+    min-height: 28px;
+}
+body.simple-mode .section-divider,
+body.simple-mode .input-row[data-vis-item="layers.rename"],
+body.simple-mode .input-row[data-vis-item="layers.sequence"],
+body.simple-mode .input-row[data-vis-item="fx.echotrail"],
+body.simple-mode .input-row[data-vis-item="fx.loopduplicate"],
+body.simple-mode .graph-library-hd,
+body.simple-mode .curve-ai-meta,
+body.simple-mode .settings-path {
+    display: none !important;
+}
+body.simple-mode .tool-btn {
+    min-height: 34px;
+}
+body.simple-mode .graph-describe {
+    padding: 6px;
+}
+body.simple-mode .curve-ai-chips {
+    padding-bottom: 0;
+}
+body.simple-mode .footer-profile .profile-meta span:last-child {
+    display: none;
+}
+body.simple-mode footer {
+    min-height: 42px;
+}
