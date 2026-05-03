@@ -112,7 +112,7 @@ The Notes tab stores local edit notes, timestamps, reminders, and ideas directly
 ## Install
 
 MacOS and Windows installer:
-https://github.com/williamm0/jxtools/releases/latest
+https://github.com/williamm0/Extension/releases/tag/INSTALLER
 
 ## Tested
 
