@@ -1,14 +1,15 @@
 # jx Tools for After Effects
 
-jx Tools is an After Effects panel built for editors. It puts the tools you actually reach for — layer controls, easing curves, project file management, automations, colour presets, beat detection, and animation utilities — all in one panel, without getting in the way.
+jx Tools is an After Effects panel built for editors. It puts the tools you actually reach for: layer controls, easing curves, project file management, automations, colour presets, beat detection, and animation utilities, all in one panel, without getting in the way.
 
 Current stable: **2.0.1** · [Download installer](https://github.com/williamm0/Extension/releases/tag/INSTALLER)
+<img width="2500" height="1080" alt="jxtoolsv2" src="https://github.com/user-attachments/assets/39929d9e-0a3f-478c-bd47-9e4b091e4482" />
 
 ---
 
 ## Project Files
 
-Drag in an image, video, audio file, or a direct media link and jx handles the rest. Imported media gets copied into a project folder, keeping things organised without you having to think about it. You can also search local files by name and pull them in without opening Finder or Explorer. Automations can trigger automatically on import if you want them to.
+Drag in an image, video, audio file, or a direct media link and the extension handles the rest. Imported media gets copied into a project folder, keeping things organised without you having to think about it. You can also search local files by name and pull them in without opening Finder or Explorer. Automations can trigger automatically on import if you want them to.
 
 ## Layers
 
@@ -44,14 +45,14 @@ Drag in an image, video, audio file, or a direct media link and jx handles the r
 - Draw custom easing curves directly in the panel's built-in graph editor.
 - Fit keyframes to a clip without breaking the graph shape.
 - Reverse keyframes and keep interpolation intact.
-- Describe a curve in plain words — "slam in", "slow fast", "mid deep" — and the local model generates it.
+- Describe a curve in plain words: "slam in", "slow fast", "mid deep", and the local model generates it.
 - Save generated or hand-drawn curves as cards and organise them into menus.
 - Suggestion chips rotate every launch so you keep discovering useful phrases.
 - Import Flow and JerryFlow graph libraries when they're found on disk.
 
 ## Automations
 
-Automations run after files come in through the project import flow. Everything is off by default — you turn on what you want.
+Automations run after files come in through the project import flow. Everything is off by default, you turn on what you want.
 
 Built-in rules:
 - Mark beats for added audio
@@ -93,4 +94,4 @@ https://github.com/williamm0/Extension/releases/tag/INSTALLER
 
 After Effects 2026 · Windows 11 · macOS Tahoe
 
-Questions or bugs: jx@jxffx.com
+Questions or bugs? Email me at: jx@jxffx.com
